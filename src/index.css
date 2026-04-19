@@ -26,11 +26,21 @@
 
 @layer base {
   body {
-    @apply bg-pixel-bg text-pixel-text font-sans antialiased relative;
+    @apply text-pixel-text font-sans antialiased relative min-h-screen;
     image-rendering: pixelated;
-    /* Dot grid background pattern */
-    background-image: radial-gradient(circle, rgba(92,61,46,0.12) 1px, transparent 1px);
-    background-size: 20px 20px;
+    background-image: url('/cafe_bg.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-color: #2b1f16;
+  }
+
+  .pixel-dialog {
+    background: rgba(253, 248, 240, 0.93);
+    border: 4px solid #5c3d2e;
+    box-shadow: 6px 6px 0px 0px rgba(0,0,0,0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
 
   body::before {

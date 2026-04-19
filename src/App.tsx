@@ -440,8 +440,8 @@ export default function App() {
     ? (activeTask.status === 'completed' || (state.isTimerRunning === false && state.timeElapsed > 0))
     : false;
 
-  // Beans are purely based on actual elapsed time: 1 bean per 20 minutes
-  const MINUTES_PER_BEAN = 20;
+  // Beans are purely based on actual elapsed time: 1 bean per 30 minutes
+  const MINUTES_PER_BEAN = 30;
   const finalLitBeans = Math.floor(state.timeElapsed / (MINUTES_PER_BEAN * 60));
   // For the bean progress display, use finalLitBeans as total too (no fixed target)
   const currentTaskBeans = activeTask?.status === 'completed'
@@ -479,6 +479,7 @@ export default function App() {
       };
       
       setFlyingStars(prev => [...prev, newStar]);
+      const earnedPoints = currentTaskBeans * 20;
       
       // Delay points update until animation reaches target (~0.6s)
       setTimeout(() => {
@@ -486,18 +487,19 @@ export default function App() {
           const updatedTasks = prev.tasks.map(t => 
             t.id === activeTask.id ? { ...t, isServed: true } : t
           );
-          return { ...prev, tasks: updatedTasks, points: prev.points + 50 };
+          return { ...prev, tasks: updatedTasks, points: prev.points + earnedPoints };
         });
         setIsPointsHighlighted(true);
         setTimeout(() => setIsPointsHighlighted(false), 300); // 0.2s + buffer
       }, 550);
     } else {
+      const earnedPoints = currentTaskBeans * 20;
       // Fallback in case refs are not available
       setState(prev => {
         const updatedTasks = prev.tasks.map(t => 
           t.id === activeTask.id ? { ...t, isServed: true } : t
         );
-        return { ...prev, tasks: updatedTasks, points: prev.points + 50 };
+        return { ...prev, tasks: updatedTasks, points: prev.points + earnedPoints };
       });
     }
 
@@ -529,7 +531,28 @@ export default function App() {
   };
 
   const handleTaskSelect = (id: string) => {
-    setState(prev => ({ ...prev, activeTaskId: id, isTimerRunning: false, timeElapsed: 0 }));
+    setState(prev => {
+      if (prev.activeTaskId === id) return prev;
+
+      // Save current time to the active task before switching
+      const updatedTasks = prev.tasks.map(t =>
+        t.id === prev.activeTaskId
+          ? { ...t, actualElapsed: prev.timeElapsed }
+          : t
+      );
+
+      // Restore time from the newly selected task
+      const newTask = updatedTasks.find(t => t.id === id);
+      const newTimeElapsed = newTask?.actualElapsed || 0;
+
+      return {
+        ...prev,
+        tasks: updatedTasks,
+        activeTaskId: id,
+        isTimerRunning: false,
+        timeElapsed: newTimeElapsed
+      };
+    });
   };
 
   const handleConfirmEarlyEnd = () => {
@@ -583,9 +606,9 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen bg-pixel-bg p-2 md:p-4 flex flex-col gap-4 max-w-6xl mx-auto font-sans overflow-y-auto custom-scrollbar">
+    <div className="h-screen p-2 md:p-4 flex flex-col gap-4 max-w-6xl mx-auto font-sans overflow-y-auto custom-scrollbar">
       {/* Top Header — Game HUD Style */}
-      <header className="flex flex-col md:flex-row items-center justify-between px-4 py-3 bg-[#fdf8f0] border-b-0 rounded-xl gap-4"
+      <header className="flex flex-col md:flex-row items-center justify-between px-4 py-3 pixel-dialog border-b-0 rounded-xl gap-4"
         style={{ border: '3px solid #5c3d2e', boxShadow: '5px 5px 0px 0px #8B6550' }}>
         <div className="flex flex-col sm:flex-row items-center gap-4 md:gap-6 w-full md:w-auto">
           <div className="flex items-center gap-3">
@@ -623,7 +646,7 @@ export default function App() {
               )}
             >
               <LayoutGrid size={15} />
-              长期任务
+              店长排班
             </button>
           </div>
         </div>
@@ -668,7 +691,7 @@ export default function App() {
       {activeView === 'daily' ? (
         <div className="flex-1 min-h-0 flex flex-col lg:grid lg:grid-cols-12 gap-4">
         {/* Left: Today's Menu (Notebook Style) */}
-        <div className="lg:col-span-5 pixel-card spiral-binder flex flex-col gap-4 pl-10 h-full overflow-hidden">
+        <div className="lg:col-span-5 pixel-dialog flex flex-col gap-4 p-5 md:p-6 rounded-xl h-full overflow-hidden">
           <div className="flex justify-between items-start shrink-0">
             <div>
               <div className="flex items-center gap-2 mb-1">
@@ -785,6 +808,10 @@ export default function App() {
                               {task.coffeeType || getCoffeeType(task.actualElapsed || 0)}
                             </span>
                           </div>
+                        ) : state.activeTaskId === task.id ? (
+                          <span className="text-[8px] font-bold text-[#c0614a] bg-[#fff3e0] px-1.5 py-0.5 rounded shrink-0">
+                            {state.timeElapsed > 0 || state.isTimerRunning ? (state.isTimerRunning ? '制作中' : '已暂停') : '待开始'}
+                          </span>
                         ) : (
                           <span className="text-[8px] font-bold text-pixel-muted/50 shrink-0">待开始</span>
                         )}
@@ -818,8 +845,7 @@ export default function App() {
         </div>
 
         {/* Right: Current Coffee */}
-        <div className="lg:col-span-7 flex flex-col gap-2 relative h-full overflow-hidden rounded-xl p-5 md:p-6"
-          style={{ background: '#fdf8f0', border: '3px solid #5c3d2e', boxShadow: '6px 6px 0px 0px #8B6550', backgroundImage: 'radial-gradient(circle, rgba(92,61,46,0.08) 1px, transparent 1px)', backgroundSize: '16px 16px' }}>
+        <div className="lg:col-span-7 flex flex-col gap-2 relative h-full overflow-hidden rounded-xl p-5 md:p-6 pixel-dialog">
           <div className="flex-1 flex gap-4 min-h-0">
             {/* Left: Coffee Visual */}
             <div className="flex-1 flex flex-col min-w-0">
@@ -861,7 +887,7 @@ export default function App() {
                 {/* Small hint above coffee */}
                 <p className="text-[9px] font-bold text-pixel-muted/70 tracking-wide mb-1 relative z-10">
                   {activeTask
-                    ? (state.isTimerRunning ? '☕ 专注越久，咖啡越香~' : '▶ 按下按钮开始专注')
+                    ? (state.isTimerRunning ? '☕ 专注越久，咖啡越香~' : (state.timeElapsed > 0 ? '▶ 按下按钮继续专注' : '▶ 按下按钮开始专注'))
                     : '← 选择左侧任务开始吧'}
                 </p>
                 <div className="relative z-10 flex flex-col items-center gap-4">
@@ -913,13 +939,23 @@ export default function App() {
                       >
                         {/* Warm glow under coffee */}
                         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-28 h-8 rounded-full blur-xl" style={{ background: 'rgba(180,120,60,0.25)' }} />
-                        <img 
-                          src={coffeeImages[activeCoffeeType] || coffeeImages['美式咖啡']} 
-                          alt={activeCoffeeType}
-                          className="w-32 h-32 md:w-40 md:h-40 object-contain coffee-glow"
-                          style={{ imageRendering: 'pixelated' }}
-                          referrerPolicy="no-referrer"
-                        />
+                        <div className="flex items-end justify-center relative">
+                          <img 
+                            src={coffeeImages[activeCoffeeType] || coffeeImages['美式咖啡']} 
+                            alt={activeCoffeeType}
+                            className="w-32 h-32 md:w-36 md:h-36 object-contain coffee-glow relative z-10"
+                            style={{ imageRendering: 'pixelated' }}
+                            referrerPolicy="no-referrer"
+                          />
+                          <div className="relative -ml-6 mb-2 z-0 opacity-90 transition-transform hover:scale-105 cursor-pointer">
+                             <img src="/cat_barista.png" className="w-[72px] h-[72px] sm:w-[108px] sm:h-[108px] object-contain" style={{ mixBlendMode: 'multiply', imageRendering: 'pixelated' }} alt="Cat Barista" />
+                             {!state.isTimerRunning && state.timeElapsed > 0 && activeTask?.status !== 'completed' && (
+                                <div className="absolute top-0 right-0 md:-right-4 text-[10px] font-bold text-[#8c6a4a] bg-white border-2 border-[#5c3d2e] px-2 py-0.5 rounded-lg shadow-[2px_2px_0px_rgba(0,0,0,0.2)] animate-bounce font-sans">
+                                  Zzz..
+                                </div>
+                             )}
+                          </div>
+                        </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -1013,7 +1049,7 @@ export default function App() {
                   } : {}}
                 >
                   {activeTask?.status === 'completed' ? <Check size={16} /> : (state.isTimerRunning ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />)}
-                  {activeTask?.status === 'completed' ? '已完成' : (state.isTimerRunning ? '暂停' : '▶ 开始专注')}
+                  {activeTask?.status === 'completed' ? '已完成' : (state.isTimerRunning ? '暂停' : (state.timeElapsed > 0 ? '▶ 继续专注' : '▶ 开始专注'))}
                 </button>
                 {/* 结束任务 — available any time after timer has started */}
                 <button 
@@ -1027,6 +1063,26 @@ export default function App() {
                   <Square size={14} fill="currentColor" />
                   <span>■ 结束任务</span>
                 </button>
+
+                {/* 🚀 测试专用：加速按钮 */}
+                {activeTask && activeTask.status !== 'completed' && (
+                  <div className="flex gap-2 mt-1 border-t-2 border-dashed border-pixel-muted/20 pt-3">
+                    <button 
+                      onClick={() => setState(prev => ({...prev, timeElapsed: prev.timeElapsed + 5 * 60}))}
+                      title="加速5分钟"
+                      className="flex-1 py-1.5 bg-[#e8e4d8] border-2 border-pixel-border rounded shadow-[0_2px_0_0_#A08A7C] text-[10px] font-bold text-pixel-muted hover:bg-[#d8c4b8] active:translate-y-0.5 active:shadow-none transition-all"
+                    >
+                      ⏩ +5 分钟
+                    </button>
+                    <button 
+                      onClick={() => setState(prev => ({...prev, timeElapsed: prev.timeElapsed + 1788}))}
+                      title="加速29.8分钟"
+                      className="flex-1 py-1.5 bg-[#e8e4d8] border-2 border-pixel-border rounded shadow-[0_2px_0_0_#A08A7C] text-[10px] font-bold text-pixel-muted hover:bg-[#d8c4b8] active:translate-y-0.5 active:shadow-none transition-all"
+                    >
+                      ⏩ +29.8 分钟
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1037,7 +1093,7 @@ export default function App() {
           {/* Calendar Header Area */}
           <div className="flex items-center justify-between px-2">
             <div className="flex items-center gap-3">
-              <h2 className="text-xl font-bold text-pixel-text">长期任务</h2>
+              <h2 className="text-xl font-bold text-pixel-text">店长排班</h2>
               <div className="px-3 py-1 bg-[#FAF0E6] border-2 border-pixel-border rounded-lg flex items-center gap-2 text-xs font-bold text-[#5D4037]">
                 <CalendarIcon size={14} className="text-[#8B4513]" />
                 月视图
@@ -1156,17 +1212,17 @@ export default function App() {
       {/* Bottom: Progress & Chat Trigger */}
       <div className="flex flex-col gap-3 mb-4 shrink-0 transition-all">
         {activeView === 'daily' && (
-          <div className="flex flex-col md:flex-row items-center justify-between py-8 px-10 gap-6 rounded-xl"
-            style={{ background: '#fdf8f0', border: '3px solid #5c3d2e', boxShadow: '6px 6px 0px 0px #8B6550', minHeight: '200px' }}>
+          <div className="flex flex-col md:flex-row items-center justify-between py-8 px-10 gap-6 rounded-xl pixel-dialog"
+            style={{ minHeight: '200px' }}>
             {/* Left label */}
             <div className="flex flex-col gap-2 shrink-0">
               <div className="flex items-center gap-2">
                 <h4 className="font-bold text-xl text-pixel-text">☕ 咖啡豆进度</h4>
                 <div className="w-5 h-5 rounded-full border-2 border-pixel-border flex items-center justify-center text-[10px] font-bold">?</div>
               </div>
-              <p className="text-xs text-pixel-muted font-bold">每 20 分钟专注 = 1 颗咖啡豆</p>
+              <p className="text-xs text-pixel-muted font-bold">每 30 分钟专注 = 1 颗咖啡豆</p>
               <p className="text-[10px] text-pixel-accent font-bold mt-1">
-                每颗豆 +20⭐<br />出餐额外 +50⭐
+                每颗豆 +20⭐
               </p>
             </div>
 
@@ -1204,8 +1260,8 @@ export default function App() {
             </div>
 
             {/* Right: count */}
-            <div className="text-right flex flex-col items-end gap-2 shrink-0">
-              <div className="font-bold text-xl font-pixel-num text-pixel-text">{finalLitBeans} / {currentTaskBeans}</div>
+            <div className="text-right flex flex-col items-end gap-1 shrink-0">
+              <div className="font-bold text-2xl font-pixel-num text-pixel-text">{finalLitBeans}</div>
               <div className="text-[10px] text-pixel-muted font-bold">颗已点亮</div>
             </div>
           </div>
@@ -1434,8 +1490,8 @@ export default function App() {
               className="pixel-modal-content text-center"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-[#5D4037] text-lg font-bold mb-4">提前结束确认</h3>
-              <p className="text-pixel-text text-sm mb-6">确定要提前结束「{activeTask?.title}」吗？</p>
+              <h3 className="text-[#5D4037] text-lg font-bold mb-4">结束确认</h3>
+              <p className="text-pixel-text text-sm mb-6">确定要结束「{activeTask?.title}」吗？</p>
               <div className="flex gap-4">
                 <button 
                   onClick={() => setEarlyEndModalStep(null)}
