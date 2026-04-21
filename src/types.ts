@@ -1,10 +1,12 @@
 export interface Task {
   id: string;
+  date?: string;
   title: string;
   subtitle: string;
-  // duration and coffeeType are now computed from actual elapsed time
-  coffeeType?: string;       // set at completion/serve time based on actual elapsed
-  actualElapsed?: number;    // seconds actually spent on this task
+  coffeeType?: string;
+  actualElapsed?: number;
+  focusStartedAt?: string | null;
+  sortOrder?: number;
   status: 'idle' | 'active' | 'completed' | 'interrupted';
   isServed?: boolean;
 }
@@ -12,6 +14,37 @@ export interface Task {
 export interface LongTermTask {
   date: string; // YYYY-MM-DD
   tasks: string[];
+}
+
+export type CalendarPlanOperationType = 'set' | 'append';
+export type AssistantDraftStatus = 'pending' | 'confirmed' | 'dismissed';
+
+export interface CalendarPlanOperation {
+  type: CalendarPlanOperationType;
+  date: string; // YYYY-MM-DD
+  tasks: string[];
+  note?: string;
+}
+
+export interface CalendarPlanDraft {
+  draftId: string;
+  input: string;
+  summary: string;
+  operations: CalendarPlanOperation[];
+  status: AssistantDraftStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CalendarMonthResponse {
+  year: number;
+  month: number;
+  entries: LongTermTask[];
+}
+
+export interface TodayTasksResponse {
+  date: string;
+  tasks: Task[];
 }
 
 export interface AppState {

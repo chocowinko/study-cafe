@@ -12,7 +12,6 @@ import {
   Flame, 
   Star, 
   ChevronDown, 
-  Send,
   ClipboardList,
   LayoutGrid,
   Clock,
@@ -24,7 +23,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'motion/react';
 import { cn } from './lib/utils';
-import { Task, AppState } from './types';
+import { AssistantDrawer } from './components/AssistantDrawer';
+import { Task, AppState, LongTermTask, CalendarPlanDraft, CalendarMonthResponse, TodayTasksResponse } from './types';
 
 // Animated Number Component for points
 const AnimatedNumber = ({ value }: { value: number }) => {
@@ -86,27 +86,6 @@ const getCoffeeType = (seconds: number): string => {
   if (minutes < 120) return '抹茶拿铁';
   return '雪顶咖啡';
 };
-
-const INITIAL_TASKS: Task[] = [
-  {
-    id: '1',
-    title: '高等数学 · 章节练习',
-    subtitle: '完成 10 道基础题',
-    status: 'idle',
-  },
-  {
-    id: '2',
-    title: '英语阅读 · 2 篇文章',
-    subtitle: '精读并整理生词',
-    status: 'idle',
-  },
-  {
-    id: '3',
-    title: '编程 · 函数基础',
-    subtitle: '完成 3 个示例题',
-    status: 'idle',
-  },
-];
 
 // Custom Pixel Icons
 const PixelTrash = () => (
@@ -191,25 +170,60 @@ const PixelProgressBar = ({ progress }: { progress: number }) => {
 // Calendar Helpers
 const daysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
 const firstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
+type BackendStatus = 'checking' | 'connected' | 'disconnected';
+
+const getLocalDateString = () => {
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+};
+
+const getTaskElapsed = (task: Task) => {
+  const baseElapsed = task.actualElapsed ?? 0;
+  if (!task.focusStartedAt) {
+    return baseElapsed;
+  }
+
+  const startedAt = new Date(task.focusStartedAt).getTime();
+  if (Number.isNaN(startedAt)) {
+    return baseElapsed;
+  }
+
+  return baseElapsed + Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
+};
+
+const replaceMonthEntries = (
+  currentTasks: LongTermTask[],
+  year: number,
+  month: number,
+  nextEntries: LongTermTask[],
+) => {
+  const monthPrefix = `${year}-${String(month).padStart(2, '0')}-`;
+  const preserved = currentTasks.filter((entry) => !entry.date.startsWith(monthPrefix));
+
+  return [...preserved, ...nextEntries].sort((a, b) => a.date.localeCompare(b.date));
+};
 
 export default function App() {
+  const todayDate = useMemo(() => getLocalDateString(), []);
+  const [todayYear, todayMonth] = todayDate.split('-').map(Number);
+
   const [state, setState] = useState<AppState>({
-    tasks: INITIAL_TASKS,
+    tasks: [],
     longTermTasks: [
       { date: '2026-04-10', tasks: ['复习期末考试大纲'] },
       { date: '2026-04-15', tasks: ['启动编程大作业', '精读 3 篇论文'] },
       { date: '2026-04-20', tasks: ['准备英语口语考试'] },
     ],
-    activeTaskId: '1',
+    activeTaskId: null,
     beans: 3,
     maxBeans: 6,
     streak: 3,
     points: 150,
     isTimerRunning: false,
-    timeElapsed: 1104, // 18:24 in seconds
+    timeElapsed: 0,
   });
 
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 3, 1)); // April 2026
+  const [currentDate, setCurrentDate] = useState(new Date(todayYear, todayMonth - 1, 1));
   const [editingDay, setEditingDay] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
 
@@ -254,10 +268,6 @@ export default function App() {
     return result;
   }, [currentDate]);
 
-  const [chatInput, setChatInput] = useState('');
-  const [chatHistory, setChatHistory] = useState<{ role: 'user' | 'ai', content: string }[]>([]);
-  const [isAiTyping, setIsAiTyping] = useState(false);
-
   const [activeView, setActiveView] = useState<'daily' | 'longterm'>('daily');
 
   const pointsCounterRef = useRef<HTMLDivElement>(null);
@@ -301,7 +311,7 @@ export default function App() {
     setEditingDay(null);
   };
 
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isAssistantDrawerOpen, setIsAssistantDrawerOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
@@ -313,10 +323,58 @@ export default function App() {
     title: '',
     subtitle: '',
   });
+  const [assistantInput, setAssistantInput] = useState('');
+  const [assistantDraft, setAssistantDraft] = useState<CalendarPlanDraft | null>(null);
+  const [assistantError, setAssistantError] = useState<string | null>(null);
+  const [isAssistantLoading, setIsAssistantLoading] = useState(false);
+  const [backendStatus, setBackendStatus] = useState<BackendStatus>('checking');
   const [formError, setFormError] = useState<string | null>(null);
   const [isShaking, setIsShaking] = useState(false);
 
   const inputRef = React.useRef<HTMLInputElement>(null);
+
+  const loadCalendarMonth = async (year: number, month: number) => {
+    const response = await fetch(`/api/calendar/month?year=${year}&month=${month}`);
+    if (!response.ok) {
+      throw new Error('Failed to load calendar month');
+    }
+
+    const data: CalendarMonthResponse = await response.json();
+    setState((prev) => ({
+      ...prev,
+      longTermTasks: replaceMonthEntries(prev.longTermTasks, data.year, data.month, data.entries),
+    }));
+  };
+
+  const loadTodayTasks = async (preferredActiveTaskId?: string | null) => {
+    const response = await fetch(`/api/tasks/today?date=${todayDate}`);
+    if (!response.ok) {
+      throw new Error('Failed to load today tasks');
+    }
+
+    const data: TodayTasksResponse = await response.json();
+    setState((prev) => {
+      const nextTasks = data.tasks;
+      const nextActiveTask = nextTasks.find((task) => task.id === preferredActiveTaskId)
+        || nextTasks.find((task) => Boolean(task.focusStartedAt))
+        || nextTasks[0]
+        || null;
+
+      return {
+        ...prev,
+        tasks: nextTasks,
+        activeTaskId: nextActiveTask?.id ?? null,
+        isTimerRunning: Boolean(nextActiveTask?.focusStartedAt),
+        timeElapsed: nextActiveTask ? getTaskElapsed(nextActiveTask) : 0,
+      };
+    });
+
+    return data;
+  };
+
+  const syncTodayMonth = async () => {
+    await loadCalendarMonth(todayYear, todayMonth);
+  };
 
   useEffect(() => {
     if (isModalOpen) {
@@ -326,7 +384,7 @@ export default function App() {
     }
   }, [isModalOpen]);
 
-  const validateAndSaveTask = () => {
+  const validateAndSaveTask = async () => {
     if (!modalForm.title.trim()) {
       setFormError('请输入任务内容');
       setIsShaking(true);
@@ -334,27 +392,49 @@ export default function App() {
       return;
     }
 
-    if (modalMode === 'add') {
-      const newTask: Task = {
-        id: Date.now().toString(),
-        title: modalForm.title,
-        subtitle: modalForm.subtitle,
-        status: 'idle'
-      };
-      setState(prev => ({
-        ...prev,
-        tasks: [...prev.tasks, newTask],
-        activeTaskId: newTask.id
-      }));
-    } else if (editingTaskId) {
-      setState(prev => ({
-        ...prev,
-        tasks: prev.tasks.map(t => t.id === editingTaskId ? {
-          ...t,
-          title: modalForm.title,
-          subtitle: modalForm.subtitle,
-        } : t)
-      }));
+    try {
+      if (modalMode === 'add') {
+        const response = await fetch('/api/tasks', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            date: todayDate,
+            title: modalForm.title,
+            subtitle: modalForm.subtitle,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create task');
+        }
+
+        const newTask: Task = await response.json();
+        await loadTodayTasks(newTask.id);
+      } else if (editingTaskId) {
+        const response = await fetch(`/api/tasks/${editingTaskId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: modalForm.title,
+            subtitle: modalForm.subtitle,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to update task');
+        }
+
+        await loadTodayTasks(editingTaskId);
+      }
+
+      await syncTodayMonth();
+    } catch (error) {
+      setFormError('保存任务失败，请稍后再试。');
+      return;
     }
 
     setIsModalOpen(false);
@@ -380,46 +460,167 @@ export default function App() {
     setIsDeleteConfirmOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (taskDeleting) {
-      setState(prev => {
-        const remainingTasks = prev.tasks.filter(t => t.id !== taskDeleting.id);
-        const newActiveId = prev.activeTaskId === taskDeleting.id 
-          ? (remainingTasks[0]?.id || null) 
-          : prev.activeTaskId;
-        return {
-          ...prev,
-          tasks: remainingTasks,
-          activeTaskId: newActiveId
-        };
-      });
+      try {
+        const response = await fetch(`/api/tasks/${taskDeleting.id}`, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to delete task');
+        }
+
+        await loadTodayTasks(state.activeTaskId === taskDeleting.id ? null : state.activeTaskId);
+        await syncTodayMonth();
+      } catch (error) {
+        console.error('Failed to delete task', error);
+      }
     }
+
     setIsDeleteConfirmOpen(false);
     setTaskDeleting(null);
   };
 
   const handleReorder = (newTasks: Task[]) => {
     setState(prev => ({ ...prev, tasks: newTasks }));
+
+    const persistReorder = async () => {
+      try {
+        await Promise.all(newTasks.map((task, index) => (
+          fetch(`/api/tasks/${task.id}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              sortOrder: index,
+            }),
+          })
+        )));
+
+        await loadTodayTasks(state.activeTaskId);
+        await syncTodayMonth();
+      } catch (error) {
+        console.error('Failed to reorder tasks', error);
+      }
+    };
+
+    void persistReorder();
   };
 
-  // Persistence
   useEffect(() => {
-    const saved = localStorage.getItem('study_cafe_tasks');
-    if (saved) {
+    const controller = new AbortController();
+
+    const checkBackend = async () => {
       try {
-        const parsedTasks = JSON.parse(saved);
-        if (Array.isArray(parsedTasks)) {
-          setState(prev => ({ ...prev, tasks: parsedTasks }));
+        const response = await fetch('/api/health', { signal: controller.signal });
+        if (!response.ok) {
+          throw new Error('Health check failed');
         }
-      } catch (e) {
-        console.error("Failed to load tasks", e);
+
+        const data: { ok?: boolean } = await response.json();
+        setBackendStatus(data.ok ? 'connected' : 'disconnected');
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setBackendStatus('disconnected');
+        }
       }
-    }
+    };
+
+    checkBackend();
+
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('study_cafe_tasks', JSON.stringify(state.tasks));
-  }, [state.tasks]);
+    let cancelled = false;
+
+    const fetchTodayTasks = async () => {
+      try {
+        if (cancelled) {
+          return;
+        }
+
+        await loadTodayTasks(state.activeTaskId);
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Failed to load today tasks', error);
+        }
+      }
+    };
+
+    fetchTodayTasks();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeView]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchMonth = async () => {
+      try {
+        const response = await fetch(`/api/calendar/month?year=${currentDate.getFullYear()}&month=${currentDate.getMonth() + 1}`);
+        if (!response.ok) {
+          throw new Error('Failed to load month');
+        }
+
+        const data: CalendarMonthResponse = await response.json();
+        if (cancelled) {
+          return;
+        }
+
+        setState((prev) => ({
+          ...prev,
+          longTermTasks: replaceMonthEntries(prev.longTermTasks, data.year, data.month, data.entries),
+        }));
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Failed to load calendar month', error);
+        }
+      }
+    };
+
+    fetchMonth();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentDate]);
+
+  useEffect(() => {
+    if (!isAssistantDrawerOpen || assistantDraft) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchPendingDrafts = async () => {
+      try {
+        const response = await fetch('/api/assistant/drafts?status=pending');
+        if (!response.ok) {
+          throw new Error('Failed to load assistant drafts');
+        }
+
+        const data: { drafts: CalendarPlanDraft[] } = await response.json();
+        if (!cancelled && data.drafts.length > 0) {
+          setAssistantDraft(data.drafts[0]);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Failed to load assistant drafts', error);
+        }
+      }
+    };
+
+    fetchPendingDrafts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAssistantDrawerOpen, assistantDraft]);
 
   useEffect(() => {
     if (isModalOpen && inputRef.current) {
@@ -465,46 +666,54 @@ export default function App() {
     if (!isTaskComplete || activeTask?.isServed) return;
     setIsServing(true);
 
-    // Coin Animation Logic
-    if (serveButtonRef.current && pointsCounterRef.current) {
-      const btnRect = serveButtonRef.current.getBoundingClientRect();
-      const counterRect = pointsCounterRef.current.getBoundingClientRect();
-      
-      const newStar = {
-        id: Date.now(),
-        startX: btnRect.left + btnRect.width / 2,
-        startY: btnRect.top + btnRect.height / 2,
-        endX: counterRect.left + counterRect.width / 2,
-        endY: counterRect.top + counterRect.height / 2
-      };
-      
-      setFlyingStars(prev => [...prev, newStar]);
-      const earnedPoints = currentTaskBeans * 20;
-      
-      // Delay points update until animation reaches target (~0.6s)
-      setTimeout(() => {
-        setState(prev => {
-          const updatedTasks = prev.tasks.map(t => 
-            t.id === activeTask.id ? { ...t, isServed: true } : t
-          );
-          return { ...prev, tasks: updatedTasks, points: prev.points + earnedPoints };
+    const persistServe = async () => {
+      try {
+        const response = await fetch(`/api/tasks/${activeTask.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            isServed: true,
+          }),
         });
-        setIsPointsHighlighted(true);
-        setTimeout(() => setIsPointsHighlighted(false), 300); // 0.2s + buffer
-      }, 550);
-    } else {
-      const earnedPoints = currentTaskBeans * 20;
-      // Fallback in case refs are not available
-      setState(prev => {
-        const updatedTasks = prev.tasks.map(t => 
-          t.id === activeTask.id ? { ...t, isServed: true } : t
-        );
-        return { ...prev, tasks: updatedTasks, points: prev.points + earnedPoints };
-      });
-    }
 
-    // Reset after animation duration
-    setTimeout(() => setIsServing(false), 3000);
+        if (!response.ok) {
+          throw new Error('Failed to serve task');
+        }
+
+        if (serveButtonRef.current && pointsCounterRef.current) {
+          const btnRect = serveButtonRef.current.getBoundingClientRect();
+          const counterRect = pointsCounterRef.current.getBoundingClientRect();
+
+          const newStar = {
+            id: Date.now(),
+            startX: btnRect.left + btnRect.width / 2,
+            startY: btnRect.top + btnRect.height / 2,
+            endX: counterRect.left + counterRect.width / 2,
+            endY: counterRect.top + counterRect.height / 2,
+          };
+
+          setFlyingStars(prev => [...prev, newStar]);
+        }
+
+        const earnedPoints = currentTaskBeans * 20;
+        setTimeout(() => {
+          setState(prev => ({ ...prev, points: prev.points + earnedPoints }));
+          setIsPointsHighlighted(true);
+          setTimeout(() => setIsPointsHighlighted(false), 300);
+        }, 550);
+
+        await loadTodayTasks(activeTask.id);
+        await syncTodayMonth();
+      } catch (error) {
+        console.error('Failed to serve task', error);
+      } finally {
+        setTimeout(() => setIsServing(false), 3000);
+      }
+    };
+
+    void persistServe();
   };
 
   useEffect(() => {
@@ -526,33 +735,173 @@ export default function App() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const backendStatusText = backendStatus === 'connected'
+    ? '后端已连接'
+    : backendStatus === 'disconnected'
+      ? '后端未连接'
+      : '检查中...';
+
   const toggleTimer = () => {
-    setState(prev => ({ ...prev, isTimerRunning: !prev.isTimerRunning }));
+    if (!activeTask) {
+      return;
+    }
+
+    const persistTimer = async () => {
+      try {
+        if (state.isTimerRunning) {
+          const response = await fetch(`/api/tasks/${activeTask.id}/focus-finish`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              actualElapsed: state.timeElapsed,
+              status: 'idle',
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to pause task');
+          }
+        } else {
+          const response = await fetch(`/api/tasks/${activeTask.id}/focus-start`, {
+            method: 'POST',
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to start focus');
+          }
+        }
+
+        await loadTodayTasks(activeTask.id);
+      } catch (error) {
+        console.error('Failed to toggle timer', error);
+      }
+    };
+
+    void persistTimer();
+  };
+
+  const handleGenerateCalendarPlan = async () => {
+    if (!assistantInput.trim()) {
+      return;
+    }
+
+    setIsAssistantLoading(true);
+    setAssistantError(null);
+
+    try {
+      const response = await fetch('/api/assistant/calendar-plan', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          input: assistantInput,
+          currentYear: currentDate.getFullYear(),
+          currentMonth: currentDate.getMonth() + 1,
+          today: todayDate,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Assistant request failed');
+      }
+
+      const data: CalendarPlanDraft = await response.json();
+      setAssistantDraft(data);
+    } catch (error) {
+      setAssistantError('排班草案生成失败，请稍后再试。');
+    } finally {
+      setIsAssistantLoading(false);
+    }
+  };
+
+  const handleApplyCalendarPlan = () => {
+    if (!assistantDraft?.draftId || assistantDraft.operations.length === 0) {
+      return;
+    }
+
+    const applyDraft = async () => {
+      try {
+        const response = await fetch('/api/assistant/confirm-draft', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            draftId: assistantDraft.draftId,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to confirm draft');
+        }
+
+        const result: { updatedDates: string[] } = await response.json();
+        const [year, month] = assistantDraft.operations[0].date.split('-').map(Number);
+        if (year && month) {
+          await loadCalendarMonth(year, month);
+          setCurrentDate(new Date(year, month - 1, 1));
+        }
+
+        if (result.updatedDates.includes(todayDate)) {
+          await loadTodayTasks(state.activeTaskId);
+        }
+
+        setEditingDay(null);
+        setAssistantDraft(null);
+        setAssistantInput('');
+        setAssistantError(null);
+        setIsAssistantDrawerOpen(false);
+      } catch (error) {
+        setAssistantError('草案确认失败，请稍后再试。');
+      }
+    };
+
+    void applyDraft();
   };
 
   const handleTaskSelect = (id: string) => {
-    setState(prev => {
-      if (prev.activeTaskId === id) return prev;
+    const selectTask = async () => {
+      if (state.activeTaskId === id) {
+        return;
+      }
 
-      // Save current time to the active task before switching
-      const updatedTasks = prev.tasks.map(t =>
-        t.id === prev.activeTaskId
-          ? { ...t, actualElapsed: prev.timeElapsed }
-          : t
-      );
+      try {
+        if (state.isTimerRunning && activeTask) {
+          const response = await fetch(`/api/tasks/${activeTask.id}/focus-finish`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              actualElapsed: state.timeElapsed,
+              status: 'idle',
+            }),
+          });
 
-      // Restore time from the newly selected task
-      const newTask = updatedTasks.find(t => t.id === id);
-      const newTimeElapsed = newTask?.actualElapsed || 0;
+          if (!response.ok) {
+            throw new Error('Failed to switch task');
+          }
 
-      return {
-        ...prev,
-        tasks: updatedTasks,
-        activeTaskId: id,
-        isTimerRunning: false,
-        timeElapsed: newTimeElapsed
-      };
-    });
+          await loadTodayTasks(id);
+          return;
+        }
+
+        const selectedTask = state.tasks.find(task => task.id === id);
+        setState(prev => ({
+          ...prev,
+          activeTaskId: id,
+          isTimerRunning: Boolean(selectedTask?.focusStartedAt),
+          timeElapsed: selectedTask ? getTaskElapsed(selectedTask) : 0,
+        }));
+      } catch (error) {
+        console.error('Failed to select task', error);
+      }
+    };
+
+    void selectTask();
   };
 
   const handleConfirmEarlyEnd = () => {
@@ -560,49 +909,55 @@ export default function App() {
   };
 
   const handleFinishStatus = (isFinished: boolean) => {
-    if (isFinished) {
-      // Branch A: Completed — lock in coffee type and actual elapsed time
-      const elapsed = state.timeElapsed;
-      const lockedCoffeeType = getCoffeeType(elapsed);
-      setState(prev => ({
-        ...prev,
-        tasks: prev.tasks.map(t =>
-          t.id === prev.activeTaskId
-            ? { ...t, status: 'completed', coffeeType: lockedCoffeeType, actualElapsed: elapsed }
-            : t
-        ),
-        isTimerRunning: false
-      }));
-    } else {
-      // Branch B: Interrupted — remove from list
-      setState(prev => ({
-        ...prev,
-        tasks: prev.tasks.filter(t => t.id !== prev.activeTaskId),
-        activeTaskId: prev.tasks.find(t => t.id !== prev.activeTaskId)?.id || null,
-        isTimerRunning: false,
-        timeElapsed: 0
-      }));
-    }
-    setEarlyEndModalStep(null);
-  };
+    const finishTask = async () => {
+      if (!activeTask) {
+        setEarlyEndModalStep(null);
+        return;
+      }
 
-  const handleSendMessage = () => {
-    if (!chatInput.trim()) return;
-    const userMessage = chatInput;
-    setChatHistory(prev => [...prev, { role: 'user', content: userMessage }]);
-    setChatInput('');
-    setIsAiTyping(true);
-    setTimeout(() => {
-      const responses = [
-        "店长收到！今天的专注状态很棒哦，继续保持。",
-        "没问题，我已经帮你调整了计划。记得适时休息。",
-        "想要更多咖啡豆？试试开启‘深度专注模式’！",
-        "别担心，学习就像品咖啡，需要一点点耐心。"
-      ];
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-      setChatHistory(prev => [...prev, { role: 'ai', content: randomResponse }]);
-      setIsAiTyping(false);
-    }, 1500);
+      try {
+        if (isFinished) {
+          const elapsed = state.timeElapsed;
+          const lockedCoffeeType = getCoffeeType(elapsed);
+          const response = await fetch(`/api/tasks/${activeTask.id}/focus-finish`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              actualElapsed: elapsed,
+              status: 'completed',
+              coffeeType: lockedCoffeeType,
+              isServed: false,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to finish task');
+          }
+
+          await loadTodayTasks(activeTask.id);
+          await syncTodayMonth();
+        } else {
+          const response = await fetch(`/api/tasks/${activeTask.id}`, {
+            method: 'DELETE',
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to delete interrupted task');
+          }
+
+          await loadTodayTasks();
+          await syncTodayMonth();
+        }
+      } catch (error) {
+        console.error('Failed to finish task', error);
+      } finally {
+        setEarlyEndModalStep(null);
+      }
+    };
+
+    void finishTask();
   };
 
   return (
@@ -624,7 +979,24 @@ export default function App() {
               />
               <span className="absolute inset-0 flex items-center justify-center text-xl z-0">☕</span>
             </div>
-            <span className="text-xl font-bold tracking-widest uppercase text-pixel-text" style={{ fontFamily: 'var(--font-pixel-num)', fontSize: '0.9rem' }}>STUDY CAFÉ</span>
+            <div className="flex flex-col gap-1">
+              <span className="text-xl font-bold tracking-widest uppercase text-pixel-text" style={{ fontFamily: 'var(--font-pixel-num)', fontSize: '0.9rem' }}>STUDY CAFÉ</span>
+              <div className="flex items-center gap-1.5 text-[9px] md:text-[10px] font-bold text-pixel-muted">
+                <span>后端连接状态</span>
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-0.5 border border-pixel-border/30",
+                    backendStatus === 'connected'
+                      ? "bg-pixel-green/15 text-pixel-green"
+                      : backendStatus === 'disconnected'
+                        ? "bg-pixel-red/15 text-pixel-red"
+                        : "bg-white/70 text-pixel-muted"
+                  )}
+                >
+                  {backendStatusText}
+                </span>
+              </div>
+            </div>
           </div>
           
           <div className="flex gap-2 w-full sm:w-auto">
@@ -1091,8 +1463,8 @@ export default function App() {
       ) : (
         <div className="flex-1 min-h-0 flex flex-col gap-4 overflow-hidden">
           {/* Calendar Header Area */}
-          <div className="flex items-center justify-between px-2">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between px-2 gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               <h2 className="text-xl font-bold text-pixel-text">店长排班</h2>
               <div className="px-3 py-1 bg-[#FAF0E6] border-2 border-pixel-border rounded-lg flex items-center gap-2 text-xs font-bold text-[#5D4037]">
                 <CalendarIcon size={14} className="text-[#8B4513]" />
@@ -1100,7 +1472,14 @@ export default function App() {
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 flex-wrap justify-end">
+              <button
+                onClick={() => setIsAssistantDrawerOpen(true)}
+                className="pixel-month-nav-btn px-3 py-2 text-[11px] font-bold gap-2"
+              >
+                <CalendarIcon size={14} />
+                AI 助手
+              </button>
               <span className="text-lg font-bold text-pixel-text">
                 {currentDate.getFullYear()}年{currentDate.getMonth() + 1}月
               </span>
@@ -1268,96 +1647,17 @@ export default function App() {
         )}
       </div>
 
-      {/* Chat Drawer */}
-      <AnimatePresence>
-        {isDrawerOpen && (
-          <>
-            {/* Backdrop */}
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsDrawerOpen(false)}
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
-            />
-            {/* Drawer */}
-            <motion.div 
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="pixel-drawer p-4 md:p-6 flex flex-col gap-4"
-            >
-              <div className="flex items-center justify-between border-b-2 border-pixel-border pb-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-white border-2 border-pixel-border rounded flex items-center justify-center overflow-hidden shrink-0 shadow-[1px_1px_0px_0px_rgba(0,0,0,0.1)]">
-                    <img 
-                      src="/logo.png" 
-                      alt="Manager Logo"
-                      className="w-full h-full object-contain"
-                      referrerPolicy="no-referrer"
-                    />
-                  </div>
-                  <span className="font-bold text-pixel-text">店长对话框</span>
-                </div>
-                <button 
-                  onClick={() => setIsDrawerOpen(false)}
-                  className="w-8 h-8 border-2 border-pixel-border rounded flex items-center justify-center hover:bg-pixel-bg transition-colors"
-                >
-                  <span className="font-bold text-lg">×</span>
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto flex flex-col gap-3 p-2">
-                {chatHistory.length === 0 && (
-                  <div className="text-center text-pixel-muted text-xs italic mt-8">
-                    有什么关于专注或咖啡的问题吗？尽管问我吧。
-                  </div>
-                )}
-                {chatHistory.map((msg, i) => (
-                  <div 
-                    key={i} 
-                    className={cn(
-                      "max-w-[80%] p-3 rounded-xl border-2 text-xs font-bold",
-                      msg.role === 'user' 
-                        ? "self-end bg-pixel-green/10 border-pixel-green text-pixel-text" 
-                        : "self-start bg-white border-pixel-border text-pixel-text"
-                    )}
-                  >
-                    <div className="text-[8px] uppercase tracking-widest text-pixel-muted mb-1">
-                      {msg.role === 'user' ? '你' : '店长'}
-                    </div>
-                    {msg.content}
-                  </div>
-                ))}
-                {isAiTyping && (
-                  <div className="self-start bg-white border-2 border-pixel-border p-3 rounded-xl text-xs font-bold italic animate-pulse">
-                    店长正在思考...
-                  </div>
-                )}
-              </div>
-
-              <div className="relative mt-auto">
-                <input 
-                  type="text" 
-                  autoFocus
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                  placeholder="输入你的问题..."
-                  className="w-full pixel-input rounded-xl py-3 px-4 pr-12 text-xs font-bold focus:outline-none"
-                />
-                <button 
-                  onClick={handleSendMessage}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-pixel-red text-white border-2 border-pixel-border rounded flex items-center justify-center shadow-[2px_2px_0px_0px_#4a3f35]"
-                >
-                  <Send size={14} />
-                </button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      <AssistantDrawer
+        draft={assistantDraft}
+        error={assistantError}
+        input={assistantInput}
+        isLoading={isAssistantLoading}
+        isOpen={isAssistantDrawerOpen}
+        onApply={handleApplyCalendarPlan}
+        onClose={() => setIsAssistantDrawerOpen(false)}
+        onInputChange={setAssistantInput}
+        onSubmit={handleGenerateCalendarPlan}
+      />
       {/* Add Task Modal */}
       <AnimatePresence>
         {isModalOpen && (
