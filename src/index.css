@@ -36,11 +36,9 @@
   }
 
   .pixel-dialog {
-    background: rgba(253, 248, 240, 0.93);
+    background: rgba(253, 248, 240, 0.90);
     border: 4px solid #5c3d2e;
     box-shadow: 6px 6px 0px 0px rgba(0,0,0,0.6);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
   }
 
   body::before {
@@ -540,7 +538,6 @@
 
 .pixel-modal-overlay {
   @apply fixed inset-0 bg-[#00000030] z-[100] flex items-center justify-center p-4;
-  backdrop-filter: blur(2px);
 }
 
 .pixel-modal-content {
