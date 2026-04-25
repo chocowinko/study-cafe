@@ -689,11 +689,11 @@ export default function App() {
   };
 
   const catImages: Record<string, string> = {
-    '美式咖啡': '/cat_barista.png',
-    '拿铁': '/cat_gray.png',
-    '卡布奇诺': '/cat_tuxedo.png',
-    '抹茶拿铁': '/cat_calico.png',
-    '雪顶咖啡': '/cat_siamese.png',
+    '美式咖啡': '/cat_gray.png',
+    '拿铁': '/cat_tuxedo.png',
+    '卡布奇诺': '/cat_calico.png',
+    '抹茶拿铁': '/cat_siamese.png',
+    '雪顶咖啡': '/cat_barista.png',
   };
 
   const handleServe = () => {
@@ -1348,12 +1348,12 @@ export default function App() {
                             <img
                               src={coffeeImages[activeCoffeeType] || coffeeImages['美式咖啡']}
                               alt={activeCoffeeType}
-                              className="w-36 h-36 md:w-[172px] md:h-[172px] object-contain coffee-glow relative z-10 -translate-x-[10px] translate-y-[20px]"
+                              className="w-40 h-40 md:w-44 md:h-44 object-contain coffee-glow relative z-10"
                               style={{ imageRendering: 'pixelated' }}
                               referrerPolicy="no-referrer"
                             />
-                            <div className="relative -ml-6 z-0 opacity-90 transition-transform hover:scale-105 cursor-pointer">
-                              <img src={catImages[activeCoffeeType] || catImages['美式咖啡']} className="w-[50px] h-[50px] sm:w-[76px] sm:h-[76px] object-contain" style={{ mixBlendMode: 'multiply', imageRendering: 'pixelated' }} alt="Cat Barista" />
+                            <div className="relative -ml-4 z-0 opacity-90 transition-transform hover:scale-105 cursor-pointer">
+                              <img src={catImages[activeCoffeeType] || catImages['美式咖啡']} className="w-20 h-20 md:w-24 md:h-24 object-contain" style={{ mixBlendMode: 'multiply', imageRendering: 'pixelated' }} alt="Cat Barista" />
                               {!state.isTimerRunning && state.timeElapsed > 0 && activeTask?.status !== 'completed' && (
                                 <div className="absolute top-0 right-0 md:-right-4 text-[10px] font-bold text-[#8c6a4a] bg-white border-2 border-[#5c3d2e] px-2 py-0.5 rounded-lg shadow-[2px_2px_0px_rgba(0,0,0,0.2)] animate-bounce font-sans">
                                   Zzz..
