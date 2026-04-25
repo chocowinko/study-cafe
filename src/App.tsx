@@ -689,11 +689,11 @@ export default function App() {
   };
 
   const catImages: Record<string, string> = {
-    '美式咖啡': '/cat_gray.png',
-    '拿铁': '/cat_tuxedo.png',
-    '卡布奇诺': '/cat_calico.png',
-    '抹茶拿铁': '/cat_siamese.png',
-    '雪顶咖啡': '/cat_barista.png',
+    '美式咖啡': '/cat_tabby_cook.png',
+    '拿铁': '/cat_calico_cake.png',
+    '卡布奇诺': '/cat_pastel.png',
+    '抹茶拿铁': '/cat_sushi.png',
+    '雪顶咖啡': '/cat_gray.png',
   };
 
   const handleServe = () => {
@@ -1353,7 +1353,12 @@ export default function App() {
                               referrerPolicy="no-referrer"
                             />
                             <div className="relative -ml-4 z-0 opacity-90 transition-transform hover:scale-105 cursor-pointer">
-                              <img src={catImages[activeCoffeeType] || catImages['美式咖啡']} className="w-20 h-20 md:w-24 md:h-24 object-contain" style={{ mixBlendMode: 'multiply', imageRendering: 'pixelated' }} alt="Cat Barista" />
+                              <img 
+                                src={catImages[activeCoffeeType] || catImages['美式咖啡']} 
+                                className="w-20 h-20 md:w-24 md:h-24 object-contain" 
+                                style={{ mixBlendMode: 'multiply', imageRendering: 'pixelated' }} 
+                                alt="Cat Barista" 
+                              />
                               {!state.isTimerRunning && state.timeElapsed > 0 && activeTask?.status !== 'completed' && (
                                 <div className="absolute top-0 right-0 md:-right-4 text-[10px] font-bold text-[#8c6a4a] bg-white border-2 border-[#5c3d2e] px-2 py-0.5 rounded-lg shadow-[2px_2px_0px_rgba(0,0,0,0.2)] animate-bounce font-sans">
                                   Zzz..
