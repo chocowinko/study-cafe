@@ -692,7 +692,7 @@ export default function App() {
     '美式咖啡': '/cat_gray.png',
     '拿铁': '/cat_calico_cake.png',
     '卡布奇诺': '/cat_tuxedo.png',
-    '抹茶拿铁': '/cat_tabby_cook.png',
+    '抹茶拿铁': '/cat_whisk.png',
     '雪顶咖啡': '/cat_sushi.png',
   };
 
