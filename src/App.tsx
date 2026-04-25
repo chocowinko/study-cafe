@@ -22,6 +22,7 @@ import {
   Pencil,
   Send,
   Sparkles,
+  X,
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'motion/react';
 import { cn } from './lib/utils';
@@ -1677,6 +1678,16 @@ export default function App() {
                                     }
                                   }}
                                 />
+                                <button
+                                  onClick={() => {
+                                    const next = editingTasks.filter((_, i) => i !== idxTask);
+                                    setEditingTasks(next.length > 0 ? next : ['']);
+                                  }}
+                                  className="p-1 text-pixel-muted hover:text-pixel-red transition-colors shrink-0"
+                                  title="删除任务"
+                                >
+                                  <X size={14} />
+                                </button>
                               </div>
                             ))}
                           </div>
