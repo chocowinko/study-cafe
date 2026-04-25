@@ -1349,8 +1349,9 @@ export default function App() {
                               src={coffeeImages[activeCoffeeType] || coffeeImages['美式咖啡']}
                               alt={activeCoffeeType}
                               className={cn(
-                                "w-40 h-40 md:w-44 md:h-44 object-contain coffee-glow relative z-10",
-                                activeCoffeeType === '美式咖啡' && "scale-90"
+                                "w-40 h-40 md:w-44 md:h-44 object-contain coffee-glow relative z-10 transition-all",
+                                activeCoffeeType === '美式咖啡' && "scale-90",
+                                activeCoffeeType === '拿铁' && "scale-[1.2] -translate-x-[20px]"
                               )}
                               style={{ imageRendering: 'pixelated' }}
                               referrerPolicy="no-referrer"
