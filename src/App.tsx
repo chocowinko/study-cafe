@@ -691,7 +691,7 @@ export default function App() {
   const catImages: Record<string, string> = {
     '美式咖啡': '/cat_gray.png',
     '拿铁': '/cat_calico_cake.png',
-    '卡布奇诺': '/cat_pastel.png',
+    '卡布奇诺': '/cat_tuxedo.png',
     '抹茶拿铁': '/cat_tabby_cook.png',
     '雪顶咖啡': '/cat_sushi.png',
   };
