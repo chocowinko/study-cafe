@@ -1348,7 +1348,10 @@ export default function App() {
                             <img
                               src={coffeeImages[activeCoffeeType] || coffeeImages['美式咖啡']}
                               alt={activeCoffeeType}
-                              className="w-40 h-40 md:w-44 md:h-44 object-contain coffee-glow relative z-10"
+                              className={cn(
+                                "w-40 h-40 md:w-44 md:h-44 object-contain coffee-glow relative z-10",
+                                activeCoffeeType === '美式咖啡' && "scale-90"
+                              )}
                               style={{ imageRendering: 'pixelated' }}
                               referrerPolicy="no-referrer"
                             />
