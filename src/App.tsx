@@ -1349,7 +1349,7 @@ export default function App() {
                               src={coffeeImages[activeCoffeeType] || coffeeImages['美式咖啡']}
                               alt={activeCoffeeType}
                               className={cn(
-                                "w-40 h-40 md:w-44 md:h-44 object-contain coffee-glow relative z-10 transition-all",
+                                "w-40 h-40 md:w-44 md:h-44 object-contain coffee-glow relative z-10 transition-all translate-y-[20px]",
                                 activeCoffeeType === '美式咖啡' && "scale-90",
                                 activeCoffeeType === '拿铁' && "scale-[0.95] -translate-x-[20px]"
                               )}
