@@ -1352,7 +1352,7 @@ export default function App() {
                               style={{ imageRendering: 'pixelated' }}
                               referrerPolicy="no-referrer"
                             />
-                            <div className="relative -ml-6 mb-2 z-0 opacity-90 transition-transform hover:scale-105 cursor-pointer">
+                            <div className="relative -ml-6 z-0 opacity-90 transition-transform hover:scale-105 cursor-pointer">
                               <img src={catImages[activeCoffeeType] || catImages['美式咖啡']} className="w-[50px] h-[50px] sm:w-[76px] sm:h-[76px] object-contain" style={{ mixBlendMode: 'multiply', imageRendering: 'pixelated' }} alt="Cat Barista" />
                               {!state.isTimerRunning && state.timeElapsed > 0 && activeTask?.status !== 'completed' && (
                                 <div className="absolute top-0 right-0 md:-right-4 text-[10px] font-bold text-[#8c6a4a] bg-white border-2 border-[#5c3d2e] px-2 py-0.5 rounded-lg shadow-[2px_2px_0px_rgba(0,0,0,0.2)] animate-bounce font-sans">
