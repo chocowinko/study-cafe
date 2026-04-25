@@ -1679,7 +1679,9 @@ export default function App() {
                                   }}
                                 />
                                 <button
-                                  onClick={() => {
+                                  onMouseDown={(e) => {
+                                    e.stopPropagation();
+                                    e.preventDefault();
                                     const next = editingTasks.filter((_, i) => i !== idxTask);
                                     setEditingTasks(next.length > 0 ? next : ['']);
                                   }}
@@ -1702,7 +1704,7 @@ export default function App() {
                           </button>
                           <div className="calendar-popover-actions">
                             <button onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); setEditingDay(null); }} className="pixel-btn-tiny cancel px-3 py-1.5">取消</button>
-                            <button onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); saveLongTermTask(); }} className="pixel-btn-tiny save px-3 py-1.5">保存</button>
+                            <button onMouseDown={async (e) => { e.stopPropagation(); e.preventDefault(); await saveLongTermTask(); }} className="pixel-btn-tiny save px-3 py-1.5">保存</button>
                           </div>
                         </div>
                       )}
