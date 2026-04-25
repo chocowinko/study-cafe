@@ -1355,10 +1355,10 @@ export default function App() {
                               style={{ imageRendering: 'pixelated' }}
                               referrerPolicy="no-referrer"
                             />
-                            <div className="relative -ml-4 z-0 opacity-90 transition-transform hover:scale-105 cursor-pointer">
+                            <div className="relative -ml-4 z-0 opacity-90 transition-transform hover:scale-105 cursor-pointer -translate-y-[20px] -translate-x-[20px]">
                               <img 
                                 src={catImages[activeCoffeeType] || catImages['美式咖啡']} 
-                                className="w-20 h-20 md:w-24 md:h-24 object-contain" 
+                                className="w-20 h-20 md:w-24 md:h-24 object-contain scale-x-[-1]" 
                                 style={{ mixBlendMode: 'multiply', imageRendering: 'pixelated' }} 
                                 alt="Cat Barista" 
                               />
