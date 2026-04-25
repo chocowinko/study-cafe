@@ -1348,12 +1348,12 @@ export default function App() {
                             <img
                               src={coffeeImages[activeCoffeeType] || coffeeImages['美式咖啡']}
                               alt={activeCoffeeType}
-                              className="w-32 h-32 md:w-36 md:h-36 object-contain coffee-glow relative z-10"
+                              className="w-40 h-40 md:w-48 md:h-48 object-contain coffee-glow relative z-10"
                               style={{ imageRendering: 'pixelated' }}
                               referrerPolicy="no-referrer"
                             />
                             <div className="relative -ml-6 mb-2 z-0 opacity-90 transition-transform hover:scale-105 cursor-pointer">
-                              <img src={catImages[activeCoffeeType] || catImages['美式咖啡']} className="w-[72px] h-[72px] sm:w-[108px] sm:h-[108px] object-contain" style={{ mixBlendMode: 'multiply', imageRendering: 'pixelated' }} alt="Cat Barista" />
+                              <img src={catImages[activeCoffeeType] || catImages['美式咖啡']} className="w-[50px] h-[50px] sm:w-[76px] sm:h-[76px] object-contain" style={{ mixBlendMode: 'multiply', imageRendering: 'pixelated' }} alt="Cat Barista" />
                               {!state.isTimerRunning && state.timeElapsed > 0 && activeTask?.status !== 'completed' && (
                                 <div className="absolute top-0 right-0 md:-right-4 text-[10px] font-bold text-[#8c6a4a] bg-white border-2 border-[#5c3d2e] px-2 py-0.5 rounded-lg shadow-[2px_2px_0px_rgba(0,0,0,0.2)] animate-bounce font-sans">
                                   Zzz..
