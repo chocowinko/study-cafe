@@ -297,20 +297,41 @@ export default function App() {
     setEditingTasks(existing && existing.tasks.length > 0 ? existing.tasks : ['']);
   };
 
-  const saveLongTermTask = () => {
+  const saveLongTermTask = async () => {
     if (!editingDay) return;
 
     const lines = editingTasks.filter(l => l.trim().length > 0);
 
-    setState(prev => {
-      const filtered = prev.longTermTasks.filter(t => t.date !== editingDay);
-      if (lines.length === 0) return { ...prev, longTermTasks: filtered };
+    try {
+      const response = await fetch('/api/calendar/day', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          date: editingDay,
+          tasks: lines,
+        }),
+      });
 
-      return {
-        ...prev,
-        longTermTasks: [...filtered, { date: editingDay, tasks: lines }]
-      };
-    });
+      if (!response.ok) {
+        throw new Error('Failed to update calendar tasks');
+      }
+
+      // If the edited day is today, refresh the daily tasks
+      if (editingDay === todayDate) {
+        await loadTodayTasks(state.activeTaskId);
+      }
+
+      // Refresh the month view to show the new tasks
+      const [year, month] = editingDay.split('-').map(Number);
+      if (year && month) {
+        await loadCalendarMonth(year, month);
+      }
+    } catch (error) {
+      console.error('Failed to save calendar tasks', error);
+      // Optional: show error to user
+    }
 
     setEditingDay(null);
   };

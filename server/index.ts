@@ -13,6 +13,7 @@ import {
   focusStartTask,
   listAssistantDrafts,
   updateTask,
+  updateCalendarDayTasks,
 } from './store.ts';
 import type {AssistantDraftStatus, CalendarPlanRequestBody, TaskStatus} from './types.ts';
 
@@ -127,6 +128,24 @@ app.get('/api/calendar/month', (req, res) => {
     month,
     entries: getCalendarMonth(year, month),
   });
+});
+
+app.put('/api/calendar/day', (req, res) => {
+  const date = typeof req.body?.date === 'string' ? req.body.date : '';
+  const tasks = Array.isArray(req.body?.tasks) ? req.body.tasks : [];
+
+  if (!date) {
+    res.status(400).json({ok: false, message: 'date is required'});
+    return;
+  }
+
+  try {
+    const result = updateCalendarDayTasks(date, tasks);
+    res.json(result);
+  } catch (error) {
+    console.error('Failed to update calendar day tasks:', error);
+    res.status(500).json({ok: false, message: 'Failed to update calendar day tasks'});
+  }
 });
 
 app.get('/api/tasks/today', (req, res) => {
