@@ -1,3 +1,4 @@
+import 'dotenv/config'; // 加载 .env 文件中的环境变量
 import express from 'express';
 import {buildOperationsFromInput} from './planner';
 import {
@@ -29,16 +30,20 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-app.post('/api/assistant/calendar-plan', (req, res) => {
+app.post('/api/assistant/calendar-plan', async (req, res) => {
   const requestBody = req.body as CalendarPlanRequestBody;
-  const draft = buildOperationsFromInput(requestBody);
-  const savedDraft = createAssistantDraft({
-    input: requestBody.input ?? '',
-    summary: draft.summary,
-    operations: draft.operations,
-  });
-
-  res.json(savedDraft);
+  try {
+    const draft = await buildOperationsFromInput(requestBody);
+    const savedDraft = createAssistantDraft({
+      input: requestBody.input ?? '',
+      summary: draft.summary,
+      operations: draft.operations,
+    });
+    res.json(savedDraft);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'AI 服务调用失败';
+    res.status(500).json({ok: false, message});
+  }
 });
 
 app.get('/api/assistant/drafts', (req, res) => {
