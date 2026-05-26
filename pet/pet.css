@@ -24,21 +24,12 @@ body {
   flex-direction: column;
   align-items: center;
   position: relative;
-}
-
-/* =====================
-   DRAG HANDLE — invisible top strip
-   ===================== */
-
-.drag-handle {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 30px;
   -webkit-app-region: drag;
   cursor: grab;
-  z-index: 10;
+}
+
+.pet-container:active {
+  cursor: grabbing;
 }
 
 /* =====================
