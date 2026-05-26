@@ -1,5 +1,6 @@
 import 'dotenv/config'; // 加载 .env 文件中的环境变量
 import express from 'express';
+import { spawn, ChildProcess } from 'child_process';
 import {buildOperationsFromInput} from './planner';
 import {
   confirmAssistantDraft,
@@ -231,6 +232,24 @@ app.post('/api/tasks/:id/focus-finish', (req, res) => {
   }
 
   res.json(task);
+});
+
+let petProcess: ChildProcess | null = null;
+
+app.post('/api/pet/summon', (req, res) => {
+  if (!petProcess || petProcess.killed) {
+    petProcess = spawn('./node_modules/.bin/electron', ['pet/electron-main.cjs']);
+    petProcess.on('exit', () => { petProcess = null; });
+  }
+  res.json({ ok: true });
+});
+
+app.post('/api/pet/dismiss', (req, res) => {
+  if (petProcess && !petProcess.killed) {
+    petProcess.kill();
+    petProcess = null;
+  }
+  res.json({ ok: true });
 });
 
 app.listen(port, '0.0.0.0', () => {

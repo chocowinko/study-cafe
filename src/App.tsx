@@ -355,6 +355,7 @@ export default function App() {
   const [backendStatus, setBackendStatus] = useState<BackendStatus>('checking');
   const [formError, setFormError] = useState<string | null>(null);
   const [isShaking, setIsShaking] = useState(false);
+  const [petEnabled, setPetEnabled] = useState(false);
 
   const inputRef = React.useRef<HTMLInputElement>(null);
 
@@ -992,6 +993,20 @@ export default function App() {
     void finishTask();
   };
 
+  const togglePet = async () => {
+    const newEnabled = !petEnabled;
+    setPetEnabled(newEnabled);
+    try {
+      if (newEnabled) {
+        await fetch('/api/pet/summon', { method: 'POST' });
+      } else {
+        await fetch('/api/pet/dismiss', { method: 'POST' });
+      }
+    } catch (e) {
+      console.error('Failed to toggle pet', e);
+    }
+  };
+
   return (
     <div className="h-screen p-2 md:p-4 flex flex-col gap-4 max-w-6xl mx-auto font-sans overflow-y-auto custom-scrollbar">
       {/* Top Header — Game HUD Style */}
@@ -1477,6 +1492,17 @@ export default function App() {
                     <Square size={14} fill="currentColor" />
                     <span>■ 结束任务</span>
                   </button>
+
+                  {/* Desktop Pet Toggle */}
+                  <div className="flex items-center justify-between mt-2 px-2 border-t-2 border-dashed border-pixel-muted/20 pt-3">
+                    <span className="text-sm font-bold text-pixel-muted flex items-center gap-1">
+                      <span className="text-lg">🐱</span> 桌面陪伴
+                    </span>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" className="sr-only peer" checked={petEnabled} onChange={togglePet} />
+                      <div className="w-11 h-6 bg-[#e8e4d8] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[20px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pixel-green border-2 border-pixel-border shadow-[2px_2px_0_0_#8B6550]"></div>
+                    </label>
+                  </div>
 
                   {/* 🚀 测试专用：加速按钮 */}
                   {activeTask && activeTask.status !== 'completed' && (
