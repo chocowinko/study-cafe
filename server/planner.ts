@@ -5,11 +5,7 @@
 
 import type { CalendarPlanOperation, CalendarPlanRequestBody } from './types';
 
-// ── 从环境变量读取 OpenClaw 配置 ──────────────────────────────────────────────
-const OPEN_CLAW_URL =
-  process.env.OPEN_CLAW_URL ?? 'http://112.74.48.242:14396/v1/chat/completions';
-const OPEN_CLAW_API_KEY =
-  process.env.OPEN_CLAW_API_KEY ?? 'a6a4eb9b1deec140337a3aad9659fb5c';
+
 
 // ── 返回值类型 ─────────────────────────────────────────────────────────────────
 export interface CalendarPlanDraft {
@@ -18,7 +14,7 @@ export interface CalendarPlanDraft {
 }
 
 // ── 发给 AI 的系统提示词 ───────────────────────────────────────────────────────
-function buildSystemPrompt(today: string, year: number, month: number): string {
+function buildSystemPrompt(today: string, year: number, month: number, mode: 'quick' | 'deep' = 'quick'): string {
   return `你是一个学习规划专家。
 今天的日期是 ${today}，当前查看的日历是 ${year} 年 ${month} 月。
 
@@ -45,7 +41,10 @@ function buildSystemPrompt(today: string, year: number, month: number): string {
 - type: "set" 表示覆盖当天全部任务；"append" 表示在原有基础上追加任务。
   默认使用 "append"，除非用户明确说"替换"、"只安排"、"覆盖"等词语。
 - date: 严格使用 YYYY-MM-DD 格式，根据上下文推算具体日期。
-- tasks: 将用户描述拆分为独立的任务条目，每条任务简洁明了（10 字以内最佳）。
+- tasks: ${mode === 'quick'
+  ? '将用户描述拆分为粗略的任务条目，每条任务简洁（10字以内），不超过3条/天，只标注关键动作。'
+  : '将用户描述细化拆分为具体可执行的子任务，每条任务说明做什么+怎么做（15字以内），可以有4-6条/天，并在note中补充时间建议。'
+}
 - note: 可选，用于补充说明，如"建议上午完成"等。
 
 ## 注意事项
@@ -70,52 +69,34 @@ export async function buildOperationsFromInput(
     return { summary: '未收到任何输入', operations: [] };
   }
 
-  const systemPrompt = buildSystemPrompt(today, year, month);
+  const mode = body.mode ?? 'quick';
+  const systemPrompt = buildSystemPrompt(today, year, month, mode);
 
-  // ── 调用 OpenClaw API ───────────────────────────────────────────────────────
-  let rawText = '';
-  try {
-    const response = await fetch(OPEN_CLAW_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${OPEN_CLAW_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'openclaw', // OpenClaw 镜像的模型名称，如有不同请修改
-        max_tokens: 1000,
-        temperature: 0.3,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: input },
-        ],
-      }),
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error('[planner] OpenClaw API error:', response.status, errText);
-      throw new Error(`AI 服务返回错误（状态码 ${response.status}）`);
+// ── 调用 OpenClaw CLI ──────────────────────────────────────────────────────
+let rawText = '';
+try {
+  const { execSync } = await import('child_process');
+  
+  const prompt = `${systemPrompt}\n\n用户输入：${input}`;
+  const escaped = prompt.replace(/'/g, `'\\''`);
+  
+  const result = execSync(
+    `openclaw agent --session-id study-cafe --message '${escaped}' --json`,
+    { 
+      encoding: 'utf-8',
+      timeout: 60000,
     }
-
-    const data = (await response.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-      error?: { message?: string };
-    };
-
-    if (data.error) {
-      throw new Error(data.error.message ?? 'AI 服务返回了错误');
-    }
-
-    rawText = data.choices?.[0]?.message?.content?.trim() ?? '';
-  } catch (err) {
-    console.error('[planner] 调用 OpenClaw 失败:', err);
-    // 返回一个友好的降级结果，而不是让整个请求崩溃
-    return {
-      summary: `AI 服务暂时不可用：${err instanceof Error ? err.message : String(err)}`,
-      operations: [],
-    };
-  }
+  );
+  
+  const parsed = JSON.parse(result);
+  rawText = parsed?.text ?? parsed?.reply ?? parsed?.message ?? '';
+} catch (err) {
+  console.error('[planner] 调用 OpenClaw 失败:', err);
+  return {
+    summary: `AI 服务暂时不可用：${err instanceof Error ? err.message : String(err)}`,
+    operations: [],
+  };
+}
 
   // ── 解析 AI 返回的 JSON ────────────────────────────────────────────────────
   try {

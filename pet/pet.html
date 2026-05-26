@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Study Café 伴宠</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Inter:wght@400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="pet.css">
+</head>
+<body>
+  <div class="pet-container" id="petContainer">
+    <!-- Drag handle -->
+    <div class="drag-handle" id="dragHandle"></div>
+
+    <!-- Cat + speech bubble -->
+    <div class="cat-area" id="catArea">
+      <img id="catImage" src="" alt="猫咪" class="cat-img">
+      <div class="speech-bubble" id="speechBubble">
+        <span id="speechText">陪你学习中 📖</span>
+      </div>
+    </div>
+
+    <!-- Mini coffee + timer -->
+    <div class="info-bar">
+      <img id="coffeeImage" src="" alt="咖啡" class="coffee-icon">
+      <div class="timer-text" id="timerDisplay">00:00</div>
+    </div>
+  </div>
+
+  <script src="pet.js"></script>
+</body>
+</html>

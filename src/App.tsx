@@ -22,6 +22,7 @@ import {
   Pencil,
   Send,
   Sparkles,
+  X,
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'motion/react';
 import { cn } from './lib/utils';
@@ -297,20 +298,40 @@ export default function App() {
     setEditingTasks(existing && existing.tasks.length > 0 ? existing.tasks : ['']);
   };
 
-  const saveLongTermTask = () => {
+  const saveLongTermTask = async () => {
     if (!editingDay) return;
 
     const lines = editingTasks.filter(l => l.trim().length > 0);
 
-    setState(prev => {
-      const filtered = prev.longTermTasks.filter(t => t.date !== editingDay);
-      if (lines.length === 0) return { ...prev, longTermTasks: filtered };
+    try {
+      const response = await fetch('/api/calendar/day', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          date: editingDay,
+          tasks: lines,
+        }),
+      });
 
-      return {
-        ...prev,
-        longTermTasks: [...filtered, { date: editingDay, tasks: lines }]
-      };
-    });
+      if (!response.ok) {
+        throw new Error('Failed to update calendar tasks');
+      }
+
+      // If the edited day is today, refresh the daily tasks
+      if (editingDay === todayDate) {
+        await loadTodayTasks(state.activeTaskId);
+      }
+
+      // Refresh the month view to show the new tasks
+      const [year, month] = editingDay.split('-').map(Number);
+      if (year && month) {
+        await loadCalendarMonth(year, month);
+      }
+    } catch (error) {
+      console.error('Failed to save calendar tasks', error);
+    }
 
     setEditingDay(null);
   };
@@ -333,7 +354,9 @@ export default function App() {
   const [isAssistantLoading, setIsAssistantLoading] = useState(false);
   const [backendStatus, setBackendStatus] = useState<BackendStatus>('checking');
   const [formError, setFormError] = useState<string | null>(null);
+  const [planMode, setPlanMode] = useState<'quick' | 'deep'>('quick');
   const [isShaking, setIsShaking] = useState(false);
+  const [petEnabled, setPetEnabled] = useState(false);
 
   const inputRef = React.useRef<HTMLInputElement>(null);
 
@@ -666,6 +689,14 @@ export default function App() {
     '雪顶咖啡': '/float_coffee.png',
   };
 
+  const catImages: Record<string, string> = {
+    '美式咖啡': '/cat_gray.png',
+    '拿铁': '/cat_calico_cake.png',
+    '卡布奇诺': '/cat_tuxedo.png',
+    '抹茶拿铁': '/cat_whisk.png',
+    '雪顶咖啡': '/cat_sushi.png',
+  };
+
   const handleServe = () => {
     if (!isTaskComplete || activeTask?.isServed) return;
     setIsServing(true);
@@ -805,6 +836,7 @@ export default function App() {
           currentYear: currentDate.getFullYear(),
           currentMonth: currentDate.getMonth() + 1,
           today: todayDate,
+          mode: planMode,
         }),
       });
 
@@ -961,6 +993,20 @@ export default function App() {
     };
 
     void finishTask();
+  };
+
+  const togglePet = async () => {
+    const newEnabled = !petEnabled;
+    setPetEnabled(newEnabled);
+    try {
+      if (newEnabled) {
+        await fetch('/api/pet/summon', { method: 'POST' });
+      } else {
+        await fetch('/api/pet/dismiss', { method: 'POST' });
+      }
+    } catch (e) {
+      console.error('Failed to toggle pet', e);
+    }
   };
 
   return (
@@ -1318,12 +1364,22 @@ export default function App() {
                             <img
                               src={coffeeImages[activeCoffeeType] || coffeeImages['美式咖啡']}
                               alt={activeCoffeeType}
-                              className="w-32 h-32 md:w-36 md:h-36 object-contain coffee-glow relative z-10"
+                              className={cn(
+                                "w-40 h-40 md:w-44 md:h-44 object-contain coffee-glow relative z-10 transition-all",
+                                activeCoffeeType === '美式咖啡' && "scale-90",
+                                activeCoffeeType === '抹茶拿铁' && "scale-90",
+                                activeCoffeeType === '拿铁' && "scale-[0.95] -translate-x-[20px] translate-y-[20px]"
+                              )}
                               style={{ imageRendering: 'pixelated' }}
                               referrerPolicy="no-referrer"
                             />
-                            <div className="relative -ml-6 mb-2 z-0 opacity-90 transition-transform hover:scale-105 cursor-pointer">
-                              <img src="/cat_barista.png" className="w-[72px] h-[72px] sm:w-[108px] sm:h-[108px] object-contain" style={{ mixBlendMode: 'multiply', imageRendering: 'pixelated' }} alt="Cat Barista" />
+                            <div className="relative -ml-4 z-0 opacity-90 transition-transform hover:scale-105 cursor-pointer -translate-y-[20px] -translate-x-[20px]">
+                              <img 
+                                src={catImages[activeCoffeeType] || catImages['美式咖啡']} 
+                                className="w-20 h-20 md:w-24 md:h-24 object-contain scale-x-[-1]" 
+                                style={{ mixBlendMode: 'multiply', imageRendering: 'pixelated' }} 
+                                alt="Cat Barista" 
+                              />
                               {!state.isTimerRunning && state.timeElapsed > 0 && activeTask?.status !== 'completed' && (
                                 <div className="absolute top-0 right-0 md:-right-4 text-[10px] font-bold text-[#8c6a4a] bg-white border-2 border-[#5c3d2e] px-2 py-0.5 rounded-lg shadow-[2px_2px_0px_rgba(0,0,0,0.2)] animate-bounce font-sans">
                                   Zzz..
@@ -1439,6 +1495,17 @@ export default function App() {
                     <span>■ 结束任务</span>
                   </button>
 
+                  {/* Desktop Pet Toggle */}
+                  <div className="flex items-center justify-between mt-2 px-2 border-t-2 border-dashed border-pixel-muted/20 pt-3">
+                    <span className="text-sm font-bold text-pixel-muted flex items-center gap-1">
+                      <span className="text-lg">🐱</span> 桌面陪伴
+                    </span>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" className="sr-only peer" checked={petEnabled} onChange={togglePet} />
+                      <div className="w-11 h-6 bg-[#e8e4d8] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[20px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pixel-green border-2 border-pixel-border shadow-[2px_2px_0_0_#8B6550]"></div>
+                    </label>
+                  </div>
+
                   {/* 🚀 测试专用：加速按钮 */}
                   {activeTask && activeTask.status !== 'completed' && (
                     <div className="flex gap-2 mt-1 border-t-2 border-dashed border-pixel-muted/20 pt-3">
@@ -1532,11 +1599,36 @@ export default function App() {
 
             {/* Input Panel */}
             <div className="shrink-0 bg-white/90 p-4 border-t-2 border-[#AE986F] flex flex-col gap-3">
+              {/* Plan Mode Toggle */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPlanMode('quick')}
+                  className={cn(
+                    "flex-1 py-2 rounded-lg text-xs font-bold border-2 transition-all flex items-center justify-center",
+                    planMode === 'quick'
+                      ? "bg-[#fff3e0] border-[#e8a840] text-[#c0614a] shadow-[1px_1px_0px_0px_#e8a840]"
+                      : "bg-[#f5f0e8] border-[#c8b49a] text-[#8d8478] hover:bg-[#ede0ce]"
+                  )}
+                >
+                  快速规划
+                </button>
+                <button
+                  onClick={() => setPlanMode('deep')}
+                  className={cn(
+                    "flex-1 py-2 rounded-lg text-xs font-bold border-2 transition-all flex items-center justify-center",
+                    planMode === 'deep'
+                      ? "bg-[#fff3e0] border-[#e8a840] text-[#c0614a] shadow-[1px_1px_0px_0px_#e8a840]"
+                      : "bg-[#f5f0e8] border-[#c8b49a] text-[#8d8478] hover:bg-[#ede0ce]"
+                  )}
+                >
+                  深度规划
+                </button>
+              </div>
               <textarea
                 value={assistantInput}
                 onChange={(e) => setAssistantInput(e.target.value)}
-                placeholder="例如：我有三篇论文要在下周五前看完，还有一篇大作业月底截止..."
-                className="pixel-input-modal custom-scrollbar min-h-[80px] resize-none text-sm"
+                placeholder={planMode === 'deep' ? "详细描述学习目标，我会帮你深入拆解..." : "例如：我有三篇论文要在下周五前看完，还有一篇大作业月底截止..."}
+                className={cn("pixel-input-modal custom-scrollbar min-h-[80px] resize-none text-sm", planMode && "amber")}
               />
               <button
                 onClick={handleGenerateCalendarPlan}
@@ -1549,7 +1641,7 @@ export default function App() {
                 )}
               >
                 <Send size={16} />
-                {isAssistantLoading ? '发送中...' : '发送请求'}
+                {isAssistantLoading ? '发送中...' : (planMode === 'deep' ? '深度规划' : '快速规划')}
               </button>
             </div>
           </div>
@@ -1656,6 +1748,18 @@ export default function App() {
                                     }
                                   }}
                                 />
+                                <button
+                                  onMouseDown={(e) => {
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                    const next = editingTasks.filter((_, i) => i !== idxTask);
+                                    setEditingTasks(next.length > 0 ? next : ['']);
+                                  }}
+                                  className="p-1 text-pixel-muted hover:text-pixel-red transition-colors shrink-0"
+                                  title="删除任务"
+                                >
+                                  <X size={14} />
+                                </button>
                               </div>
                             ))}
                           </div>
@@ -1670,7 +1774,7 @@ export default function App() {
                           </button>
                           <div className="calendar-popover-actions">
                             <button onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); setEditingDay(null); }} className="pixel-btn-tiny cancel px-3 py-1.5">取消</button>
-                            <button onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); saveLongTermTask(); }} className="pixel-btn-tiny save px-3 py-1.5">保存</button>
+                            <button onMouseDown={async (e) => { e.stopPropagation(); e.preventDefault(); await saveLongTermTask(); }} className="pixel-btn-tiny save px-3 py-1.5">保存</button>
                           </div>
                         </div>
                       )}

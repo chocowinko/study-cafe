@@ -13,6 +13,8 @@ interface AssistantDrawerProps {
   onClose: () => void;
   onInputChange: (value: string) => void;
   onSubmit: () => void;
+  mode: 'quick' | 'deep';              // 新增
+  onModeChange: (mode: 'quick' | 'deep') => void;  // 新增
 }
 
 const actionLabelMap: Record<CalendarPlanOperation['type'], string> = {
@@ -39,6 +41,8 @@ export function AssistantDrawer({
   onClose,
   onInputChange,
   onSubmit,
+  mode, 
+  onModeChange,
 }: AssistantDrawerProps) {
   return (
     <AnimatePresence>
