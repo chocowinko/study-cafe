@@ -23,6 +23,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   position: relative;
   -webkit-app-region: drag;
   cursor: grab;
@@ -37,7 +38,6 @@ body {
    ===================== */
 
 .cat-area {
-  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
