@@ -1,0 +1,480 @@
+/* ========================================
+   Study Café 桌面伴宠 — 样式
+   ======================================== */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: transparent;
+  overflow: hidden;
+  font-family: 'Inter', 'ZCOOL KuaiLe', sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* =====================
+   MAIN CONTAINER
+   ===================== */
+
+.pet-container {
+  width: 280px;
+  height: 400px;
+  background: rgba(253, 248, 240, 0.95);
+  border: 3px solid #5c3d2e;
+  border-radius: 20px;
+  box-shadow:
+    6px 6px 0px 0px #8B6550,
+    0 12px 40px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+/* =====================
+   DRAG HANDLE
+   ===================== */
+
+.drag-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 36px;
+  -webkit-app-region: drag;
+  cursor: grab;
+  z-index: 10;
+}
+
+.drag-handle::after {
+  content: '• • •';
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: #b09878;
+  letter-spacing: 4px;
+  pointer-events: none;
+}
+
+/* =====================
+   CLOSE BUTTON
+   ===================== */
+
+.close-btn {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 22px;
+  height: 22px;
+  background: rgba(192, 97, 74, 0.15);
+  border: 2px solid #c0614a;
+  border-radius: 6px;
+  color: #c0614a;
+  font-size: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  z-index: 20;
+  -webkit-app-region: no-drag;
+  line-height: 1;
+}
+
+.close-btn:hover {
+  background: #c0614a;
+  color: white;
+  transform: scale(1.1);
+}
+
+/* =====================
+   CAT SECTION
+   ===================== */
+
+.cat-section {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 32px 16px 8px;
+  position: relative;
+}
+
+.cat-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.cat-img {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  transition: transform 0.3s ease;
+  filter: drop-shadow(2px 4px 6px rgba(92, 61, 46, 0.25));
+}
+
+/* Cat animation states */
+.cat-idle .cat-img {
+  animation: catIdle 3s ease-in-out infinite;
+}
+
+.cat-working .cat-img {
+  animation: catWorking 1.5s ease-in-out infinite;
+}
+
+.cat-done .cat-img {
+  animation: catDone 0.6s ease-in-out 3;
+}
+
+@keyframes catIdle {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-3px) rotate(-1deg); }
+  50% { transform: translateY(-5px) rotate(0deg); }
+  75% { transform: translateY(-3px) rotate(1deg); }
+}
+
+@keyframes catWorking {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-3px) scale(1.03); }
+}
+
+@keyframes catDone {
+  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+  25% { transform: translateY(-12px) rotate(-5deg) scale(1.08); }
+  50% { transform: translateY(-16px) rotate(0deg) scale(1.1); }
+  75% { transform: translateY(-12px) rotate(5deg) scale(1.08); }
+}
+
+/* =====================
+   SPEECH BUBBLE
+   ===================== */
+
+.speech-bubble {
+  position: absolute;
+  top: -8px;
+  right: -60px;
+  background: #fff8ec;
+  border: 2px solid #5c3d2e;
+  border-radius: 12px 12px 12px 4px;
+  padding: 6px 10px;
+  max-width: 130px;
+  box-shadow: 2px 2px 0px 0px #8B6550;
+  animation: bubbleFadeIn 0.4s ease-out;
+  z-index: 5;
+}
+
+.speech-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 12px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #5c3d2e;
+}
+
+.speech-bubble span {
+  font-size: 10px;
+  font-weight: 600;
+  color: #3d2b1a;
+  line-height: 1.4;
+  display: block;
+}
+
+@keyframes bubbleFadeIn {
+  from { opacity: 0; transform: translateY(4px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* =====================
+   CAT STATUS INDICATOR
+   ===================== */
+
+.cat-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  padding: 3px 10px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1.5px solid #d8c0a0;
+  border-radius: 20px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #8c6a4a;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-dot.idle {
+  background: #b0a090;
+  animation: statusPulse 2s ease-in-out infinite;
+}
+
+.status-dot.working {
+  background: #6aaa6a;
+  animation: statusPulse 1s ease-in-out infinite;
+}
+
+.status-dot.done {
+  background: #e8a840;
+  animation: statusGlow 1.5s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+@keyframes statusGlow {
+  0%, 100% { opacity: 1; box-shadow: 0 0 4px rgba(232, 168, 64, 0.6); }
+  50% { opacity: 0.8; box-shadow: 0 0 10px rgba(232, 168, 64, 0.9); }
+}
+
+/* =====================
+   COFFEE SECTION
+   ===================== */
+
+.coffee-section {
+  flex: 0 0 auto;
+  padding: 8px 20px;
+}
+
+.coffee-display {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #2a1f14;
+  border: 3px solid #5c3d2e;
+  border-radius: 12px;
+  padding: 10px 14px;
+  box-shadow: 3px 3px 0px 0px #1a0f08, inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.coffee-img {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 4px 8px rgba(180, 120, 60, 0.4));
+  transition: all 0.5s ease;
+}
+
+.coffee-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.coffee-name {
+  font-size: 10px;
+  font-weight: 700;
+  color: #a08060;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.timer-display {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 1.4rem;
+  color: #a8e890;
+  line-height: 1;
+  text-shadow: 0 0 12px rgba(120, 220, 100, 0.5);
+  transition: color 0.3s;
+}
+
+.timer-display.paused {
+  color: #e8a840;
+  text-shadow: 0 0 12px rgba(232, 168, 64, 0.5);
+  animation: timerBlink 1.2s ease-in-out infinite;
+}
+
+@keyframes timerBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* =====================
+   CONTROLS
+   ===================== */
+
+.controls-section {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  padding: 10px 20px;
+  gap: 10px;
+}
+
+.pet-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 3px solid #5c3d2e;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  -webkit-app-region: no-drag;
+}
+
+.start-btn {
+  background: #6aaa6a;
+  color: white;
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.12),
+    0px 5px 0px 0px #3d7a3d;
+}
+
+.start-btn:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.start-btn:active {
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.2),
+    0px 2px 0px 0px #3d7a3d;
+}
+
+.stop-btn {
+  background: #c0614a;
+  color: white;
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.12),
+    0px 5px 0px 0px #8a3a28;
+}
+
+.stop-btn:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.stop-btn:active {
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.2),
+    0px 2px 0px 0px #8a3a28;
+}
+
+.btn-icon {
+  font-size: 10px;
+}
+
+.btn-text {
+  letter-spacing: 0.04em;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* =====================
+   MOTIVATIONAL TICKER
+   ===================== */
+
+.ticker-section {
+  flex: 0 0 auto;
+  padding: 6px 16px 12px;
+}
+
+.ticker-text {
+  font-size: 10px;
+  font-weight: 600;
+  color: #8c6a4a;
+  text-align: center;
+  line-height: 1.5;
+  padding: 6px 10px;
+  background: rgba(237, 224, 206, 0.6);
+  border-radius: 8px;
+  border: 1.5px dashed #c8b49a;
+  animation: tickerFade 0.5s ease-out;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes tickerFade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* =====================
+   COFFEE UPGRADE FLASH
+   ===================== */
+
+.coffee-upgrade {
+  animation: coffeeFlash 0.6s ease-out;
+}
+
+@keyframes coffeeFlash {
+  0% { transform: scale(1); filter: brightness(1); }
+  30% { transform: scale(1.2); filter: brightness(1.5) drop-shadow(0 0 20px rgba(232, 168, 64, 0.8)); }
+  100% { transform: scale(1); filter: brightness(1) drop-shadow(0 4px 8px rgba(180, 120, 60, 0.4)); }
+}
+
+/* =====================
+   PARTICLES (confetti on milestone)
+   ===================== */
+
+.particle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: particleFly 1s ease-out forwards;
+}
+
+@keyframes particleFly {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--dy)) scale(0.3);
+  }
+}
+
+/* =====================
+   SCROLLBAR
+   ===================== */
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 90, 43, 0.3);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
