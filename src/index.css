@@ -250,6 +250,11 @@
   box-shadow: 0 0 0 3px rgba(106, 170, 106, 0.15);
 }
 
+.pixel-input-modal.amber:focus {
+  border-color: #e8a840;
+  box-shadow: 0 0 0 3px rgba(232, 168, 64, 0.15);
+}
+
 .pixel-input-modal.dashed {
   border-style: dashed;
 }

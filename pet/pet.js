@@ -27,21 +27,26 @@ const CAT_IMAGES = {
 };
 
 const ENCOURAGEMENTS = [
-  '你的咖啡还热着呢☕',
-  '猫咪看你学习中 🐱',
-  '每分钟都有意义！✨',
-  '专注的你最棒了 💪',
-  '冲冲冲！🚀',
-  '深呼吸，保持专注 🌿',
-  '知识越品越香 ☕',
+  '每一次专注都在为未来铺路 ✨',
+  '知识是最好的咖啡因 ☕',
+  '今天的努力，明天的底气 💪',
+  '不积跬步，无以至千里 🏔️',
+  '脑细胞在燃烧，神经元在连接 🧠',
+  '你的咖啡还热着呢～',
+  '趁热打铁，正当时！🔥',
+  '这杯咖啡在见证你的成长',
+  '喝完这杯，又是一条好汉！',
+  '喵～主人好认真，值得一条小鱼干 🐟',
+  '你学多久，我就陪你多久 🐾',
+  '猫咪说：别摸鱼了！🐱',
+  '冲冲冲！目标就在前方 🚀',
+  '累了就深呼吸，然后继续 🌿',
+  '你已经比上一秒更厉害了！',
+  '保持节奏，你是最强的 🏆',
+  '再坚持一下，奶茶在向你招手 🧋',
+  '奖励自己一块小饼干 🍪',
+  '胜利的茶歇就在不远处 🍵',
   '努力会有回报的 🌟',
-  '加油加油！💯',
-  '猫咪为你打 call 🎉',
-  '主人辛苦了！🐾',
-  '坚持就是胜利 🏆',
-  '你比昨天更厉害了 📈',
-  '继续保持！😊',
-  '学累了就看看猫猫 🌈',
 ];
 
 const IDLE_MESSAGES = [
@@ -60,6 +65,8 @@ let state = {
   elapsedSeconds: 0,
   currentCoffeeTier: 0,
   lastCoffeeTier: -1,
+  encourageIndex: 0,
+  idleIndex: 0,
 };
 
 let pollTimer = null;
@@ -149,6 +156,16 @@ function spawnConfetti(count = 8) {
   }
 }
 
+function nextEncouragement() {
+  state.encourageIndex = (state.encourageIndex + 1) % ENCOURAGEMENTS.length;
+  setSpeech(ENCOURAGEMENTS[state.encourageIndex]);
+}
+
+function nextIdleMessage() {
+  state.idleIndex = (state.idleIndex + 1) % IDLE_MESSAGES.length;
+  setSpeech(IDLE_MESSAGES[state.idleIndex]);
+}
+
 // =====================
 // SYNC FROM BACKEND
 // =====================
@@ -192,7 +209,7 @@ async function pollBackend() {
         state.isFocusing = false;
         stopLocalTick();
         stopEncouragement();
-        setRandomSpeech(IDLE_MESSAGES);
+        nextIdleMessage();
       }
     }
   } catch (e) {
@@ -237,8 +254,9 @@ function stopLocalTick() {
 function startEncouragement() {
   stopEncouragement();
   setSpeech('开始学习啦！📖');
+  state.encourageIndex = 0;
   encourageTimer = setInterval(() => {
-    setRandomSpeech(ENCOURAGEMENTS);
+    nextEncouragement();
   }, 25000);
 }
 
@@ -256,7 +274,7 @@ function stopEncouragement() {
 function init() {
   // Set initial state
   updateCoffee(0);
-  setRandomSpeech(IDLE_MESSAGES);
+  nextIdleMessage();
 
   // Start polling backend
   pollBackend();
@@ -265,9 +283,18 @@ function init() {
   // Rotate idle messages
   setInterval(() => {
     if (!state.isFocusing) {
-      setRandomSpeech(IDLE_MESSAGES);
+      nextIdleMessage();
     }
   }, 15000);
+
+  // Click cat to manually cycle through messages
+  els.catArea.addEventListener('click', () => {
+    if (state.isFocusing) {
+      nextEncouragement();
+    } else {
+      nextIdleMessage();
+    }
+  });
 }
 
 document.addEventListener('DOMContentLoaded', init);

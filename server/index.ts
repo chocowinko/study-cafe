@@ -236,9 +236,13 @@ app.post('/api/tasks/:id/focus-finish', (req, res) => {
 
 let petProcess: ChildProcess | null = null;
 
+const electronPath = process.platform === 'win32'
+  ? './node_modules/electron/dist/electron.exe'
+  : './node_modules/.bin/electron';
+
 app.post('/api/pet/summon', (req, res) => {
   if (!petProcess || petProcess.killed) {
-    petProcess = spawn('./node_modules/.bin/electron', ['pet/electron-main.cjs']);
+    petProcess = spawn(electronPath, ['pet/electron-main.cjs']);
     petProcess.on('exit', () => { petProcess = null; });
   }
   res.json({ ok: true });

@@ -43,6 +43,8 @@ body {
   justify-content: center;
   position: relative;
   padding-top: 20px;
+  -webkit-app-region: no-drag;
+  cursor: pointer;
 }
 
 .cat-img {
@@ -76,6 +78,8 @@ body {
   box-shadow: 2px 2px 0px 0px rgba(139, 101, 80, 0.5);
   animation: bubbleIn 0.4s ease-out;
   z-index: 5;
+  -webkit-app-region: no-drag;
+  cursor: pointer;
 }
 
 .speech-bubble::after {

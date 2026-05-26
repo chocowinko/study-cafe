@@ -354,6 +354,7 @@ export default function App() {
   const [isAssistantLoading, setIsAssistantLoading] = useState(false);
   const [backendStatus, setBackendStatus] = useState<BackendStatus>('checking');
   const [formError, setFormError] = useState<string | null>(null);
+  const [planMode, setPlanMode] = useState<'quick' | 'deep'>('quick');
   const [isShaking, setIsShaking] = useState(false);
   const [petEnabled, setPetEnabled] = useState(false);
 
@@ -1597,11 +1598,36 @@ export default function App() {
 
             {/* Input Panel */}
             <div className="shrink-0 bg-white/90 p-4 border-t-2 border-[#AE986F] flex flex-col gap-3">
+              {/* Plan Mode Toggle */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPlanMode('quick')}
+                  className={cn(
+                    "flex-1 py-2 rounded-lg text-xs font-bold border-2 transition-all flex items-center justify-center",
+                    planMode === 'quick'
+                      ? "bg-[#fff3e0] border-[#e8a840] text-[#c0614a] shadow-[1px_1px_0px_0px_#e8a840]"
+                      : "bg-[#f5f0e8] border-[#c8b49a] text-[#8d8478] hover:bg-[#ede0ce]"
+                  )}
+                >
+                  快速规划
+                </button>
+                <button
+                  onClick={() => setPlanMode('deep')}
+                  className={cn(
+                    "flex-1 py-2 rounded-lg text-xs font-bold border-2 transition-all flex items-center justify-center",
+                    planMode === 'deep'
+                      ? "bg-[#fff3e0] border-[#e8a840] text-[#c0614a] shadow-[1px_1px_0px_0px_#e8a840]"
+                      : "bg-[#f5f0e8] border-[#c8b49a] text-[#8d8478] hover:bg-[#ede0ce]"
+                  )}
+                >
+                  深度规划
+                </button>
+              </div>
               <textarea
                 value={assistantInput}
                 onChange={(e) => setAssistantInput(e.target.value)}
-                placeholder="例如：我有三篇论文要在下周五前看完，还有一篇大作业月底截止..."
-                className="pixel-input-modal custom-scrollbar min-h-[80px] resize-none text-sm"
+                placeholder={planMode === 'deep' ? "详细描述学习目标，我会帮你深入拆解..." : "例如：我有三篇论文要在下周五前看完，还有一篇大作业月底截止..."}
+                className={cn("pixel-input-modal custom-scrollbar min-h-[80px] resize-none text-sm", planMode && "amber")}
               />
               <button
                 onClick={handleGenerateCalendarPlan}
@@ -1614,7 +1640,7 @@ export default function App() {
                 )}
               >
                 <Send size={16} />
-                {isAssistantLoading ? '发送中...' : '发送请求'}
+                {isAssistantLoading ? '发送中...' : (planMode === 'deep' ? '深度规划' : '快速规划')}
               </button>
             </div>
           </div>
