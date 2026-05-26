@@ -836,6 +836,7 @@ export default function App() {
           currentYear: currentDate.getFullYear(),
           currentMonth: currentDate.getMonth() + 1,
           today: todayDate,
+          mode: planMode,
         }),
       });
 

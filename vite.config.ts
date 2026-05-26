@@ -18,7 +18,7 @@ export default defineConfig(({mode}) => {
     server: {
       proxy: {
         '/api': {
-          target: 'http://127.0.0.1:3001',
+          target: 'http://47.107.156.179:3001',
           changeOrigin: true,
         },
       },

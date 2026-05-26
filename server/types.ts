@@ -13,6 +13,7 @@ export interface CalendarPlanRequestBody {
   currentYear?: number;
   input?: string;
   today?: string;
+  mode?: 'quick' | 'deep'; 
 }
 
 export interface AssistantDraftRecord {
