@@ -11,54 +11,21 @@
 </head>
 <body>
   <div class="pet-container" id="petContainer">
-    <!-- Drag handle (entire top area) -->
+    <!-- Drag handle -->
     <div class="drag-handle" id="dragHandle"></div>
 
-    <!-- Close button -->
-    <button class="close-btn" id="closeBtn" title="关闭伴宠">✕</button>
-
-    <!-- Cat section -->
-    <div class="cat-section">
-      <div class="cat-wrapper" id="catWrapper">
-        <img id="catImage" src="" alt="猫咪伴宠" class="cat-img">
-        <!-- Speech bubble -->
-        <div class="speech-bubble" id="speechBubble">
-          <span id="speechText">准备好学习了吗？</span>
-        </div>
-        <!-- Status indicator -->
-        <div class="cat-status" id="catStatus">
-          <span class="status-dot idle"></span>
-          <span class="status-text">休息中</span>
-        </div>
+    <!-- Cat + speech bubble -->
+    <div class="cat-area" id="catArea">
+      <img id="catImage" src="" alt="猫咪" class="cat-img">
+      <div class="speech-bubble" id="speechBubble">
+        <span id="speechText">陪你学习中 📖</span>
       </div>
     </div>
 
-    <!-- Coffee + Timer section -->
-    <div class="coffee-section">
-      <div class="coffee-display">
-        <img id="coffeeImage" src="" alt="咖啡" class="coffee-img">
-        <div class="coffee-info">
-          <div class="coffee-name" id="coffeeName">美式咖啡</div>
-          <div class="timer-display" id="timerDisplay">00:00</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Controls -->
-    <div class="controls-section">
-      <button class="pet-btn start-btn" id="startBtn">
-        <span class="btn-icon">▶</span>
-        <span class="btn-text">开始专注</span>
-      </button>
-      <button class="pet-btn stop-btn hidden" id="stopBtn">
-        <span class="btn-icon">■</span>
-        <span class="btn-text">结束专注</span>
-      </button>
-    </div>
-
-    <!-- Motivational ticker -->
-    <div class="ticker-section" id="tickerSection">
-      <div class="ticker-text" id="tickerText">点击「开始专注」，猫咪会陪你一起学习哦 🐾</div>
+    <!-- Mini coffee + timer -->
+    <div class="info-bar">
+      <img id="coffeeImage" src="" alt="咖啡" class="coffee-icon">
+      <div class="timer-text" id="timerDisplay">00:00</div>
     </div>
   </div>
 

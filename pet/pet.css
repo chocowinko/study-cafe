@@ -1,12 +1,9 @@
 /* ========================================
-   Study Café 桌面伴宠 — 样式
+   Study Café 桌面伴宠 — 极简样式
+   无背景卡片，纯透明浮动
    ======================================== */
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
   background: transparent;
@@ -17,26 +14,20 @@ body {
 }
 
 /* =====================
-   MAIN CONTAINER
+   CONTAINER — fully transparent
    ===================== */
 
 .pet-container {
-  width: 280px;
-  height: 400px;
-  background: rgba(253, 248, 240, 0.95);
-  border: 3px solid #5c3d2e;
-  border-radius: 20px;
-  box-shadow:
-    6px 6px 0px 0px #8B6550,
-    0 12px 40px rgba(0, 0, 0, 0.15);
+  width: 200px;
+  height: 240px;
   display: flex;
   flex-direction: column;
+  align-items: center;
   position: relative;
-  overflow: hidden;
 }
 
 /* =====================
-   DRAG HANDLE
+   DRAG HANDLE — invisible top strip
    ===================== */
 
 .drag-handle {
@@ -44,384 +35,114 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  height: 36px;
+  height: 30px;
   -webkit-app-region: drag;
   cursor: grab;
   z-index: 10;
 }
 
-.drag-handle::after {
-  content: '• • •';
-  position: absolute;
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 10px;
-  color: #b09878;
-  letter-spacing: 4px;
-  pointer-events: none;
-}
-
 /* =====================
-   CLOSE BUTTON
+   CAT AREA
    ===================== */
 
-.close-btn {
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  width: 22px;
-  height: 22px;
-  background: rgba(192, 97, 74, 0.15);
-  border: 2px solid #c0614a;
-  border-radius: 6px;
-  color: #c0614a;
-  font-size: 10px;
-  font-weight: bold;
-  cursor: pointer;
+.cat-area {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
-  z-index: 20;
-  -webkit-app-region: no-drag;
-  line-height: 1;
-}
-
-.close-btn:hover {
-  background: #c0614a;
-  color: white;
-  transform: scale(1.1);
-}
-
-/* =====================
-   CAT SECTION
-   ===================== */
-
-.cat-section {
-  flex: 0 0 auto;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 32px 16px 8px;
   position: relative;
-}
-
-.cat-wrapper {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  padding-top: 20px;
 }
 
 .cat-img {
-  width: 100px;
-  height: 100px;
+  width: 110px;
+  height: 110px;
   object-fit: contain;
   image-rendering: pixelated;
-  transition: transform 0.3s ease;
-  filter: drop-shadow(2px 4px 6px rgba(92, 61, 46, 0.25));
+  filter: drop-shadow(2px 4px 8px rgba(92, 61, 46, 0.3));
+  animation: catBreathe 3s ease-in-out infinite;
 }
 
-/* Cat animation states */
-.cat-idle .cat-img {
-  animation: catIdle 3s ease-in-out infinite;
-}
-
-.cat-working .cat-img {
-  animation: catWorking 1.5s ease-in-out infinite;
-}
-
-.cat-done .cat-img {
-  animation: catDone 0.6s ease-in-out 3;
-}
-
-@keyframes catIdle {
+@keyframes catBreathe {
   0%, 100% { transform: translateY(0) rotate(0deg); }
-  25% { transform: translateY(-3px) rotate(-1deg); }
-  50% { transform: translateY(-5px) rotate(0deg); }
-  75% { transform: translateY(-3px) rotate(1deg); }
-}
-
-@keyframes catWorking {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-3px) scale(1.03); }
-}
-
-@keyframes catDone {
-  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
-  25% { transform: translateY(-12px) rotate(-5deg) scale(1.08); }
-  50% { transform: translateY(-16px) rotate(0deg) scale(1.1); }
-  75% { transform: translateY(-12px) rotate(5deg) scale(1.08); }
+  30% { transform: translateY(-4px) rotate(-1deg); }
+  60% { transform: translateY(-6px) rotate(0.5deg); }
 }
 
 /* =====================
-   SPEECH BUBBLE
+   SPEECH BUBBLE — floats above cat
    ===================== */
 
 .speech-bubble {
   position: absolute;
-  top: -8px;
-  right: -60px;
-  background: #fff8ec;
+  top: 2px;
+  right: -10px;
+  background: rgba(255, 248, 236, 0.95);
   border: 2px solid #5c3d2e;
-  border-radius: 12px 12px 12px 4px;
-  padding: 6px 10px;
-  max-width: 130px;
-  box-shadow: 2px 2px 0px 0px #8B6550;
-  animation: bubbleFadeIn 0.4s ease-out;
+  border-radius: 10px 10px 10px 2px;
+  padding: 5px 9px;
+  max-width: 120px;
+  box-shadow: 2px 2px 0px 0px rgba(139, 101, 80, 0.5);
+  animation: bubbleIn 0.4s ease-out;
   z-index: 5;
 }
 
 .speech-bubble::after {
   content: '';
   position: absolute;
-  bottom: -6px;
-  left: 12px;
-  width: 0;
-  height: 0;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-top: 6px solid #5c3d2e;
+  bottom: -5px;
+  left: 10px;
+  width: 0; height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid #5c3d2e;
 }
 
 .speech-bubble span {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
   color: #3d2b1a;
   line-height: 1.4;
   display: block;
 }
 
-@keyframes bubbleFadeIn {
-  from { opacity: 0; transform: translateY(4px) scale(0.95); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+@keyframes bubbleIn {
+  from { opacity: 0; transform: translateY(3px) scale(0.9); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 /* =====================
-   CAT STATUS INDICATOR
+   INFO BAR — coffee icon + tiny timer
    ===================== */
 
-.cat-status {
+.info-bar {
   display: flex;
   align-items: center;
-  gap: 5px;
-  margin-top: 6px;
-  padding: 3px 10px;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1.5px solid #d8c0a0;
-  border-radius: 20px;
-  font-size: 9px;
-  font-weight: 700;
-  color: #8c6a4a;
+  gap: 8px;
+  background: rgba(42, 31, 20, 0.88);
+  border: 2px solid #5c3d2e;
+  border-radius: 10px;
+  padding: 5px 12px;
+  box-shadow: 2px 2px 0px 0px rgba(26, 15, 8, 0.6);
+  margin-bottom: 6px;
 }
 
-.status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.status-dot.idle {
-  background: #b0a090;
-  animation: statusPulse 2s ease-in-out infinite;
-}
-
-.status-dot.working {
-  background: #6aaa6a;
-  animation: statusPulse 1s ease-in-out infinite;
-}
-
-.status-dot.done {
-  background: #e8a840;
-  animation: statusGlow 1.5s ease-in-out infinite;
-}
-
-@keyframes statusPulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.85); }
-}
-
-@keyframes statusGlow {
-  0%, 100% { opacity: 1; box-shadow: 0 0 4px rgba(232, 168, 64, 0.6); }
-  50% { opacity: 0.8; box-shadow: 0 0 10px rgba(232, 168, 64, 0.9); }
-}
-
-/* =====================
-   COFFEE SECTION
-   ===================== */
-
-.coffee-section {
-  flex: 0 0 auto;
-  padding: 8px 20px;
-}
-
-.coffee-display {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  background: #2a1f14;
-  border: 3px solid #5c3d2e;
-  border-radius: 12px;
-  padding: 10px 14px;
-  box-shadow: 3px 3px 0px 0px #1a0f08, inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-.coffee-img {
-  width: 52px;
-  height: 52px;
+.coffee-icon {
+  width: 28px;
+  height: 28px;
   object-fit: contain;
   image-rendering: pixelated;
-  filter: drop-shadow(0 4px 8px rgba(180, 120, 60, 0.4));
-  transition: all 0.5s ease;
+  filter: drop-shadow(0 2px 4px rgba(180, 120, 60, 0.4));
+  transition: all 0.4s ease;
 }
 
-.coffee-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.coffee-name {
-  font-size: 10px;
-  font-weight: 700;
-  color: #a08060;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.timer-display {
+.timer-text {
   font-family: 'Press Start 2P', monospace;
-  font-size: 1.4rem;
+  font-size: 0.7rem;
   color: #a8e890;
   line-height: 1;
-  text-shadow: 0 0 12px rgba(120, 220, 100, 0.5);
-  transition: color 0.3s;
-}
-
-.timer-display.paused {
-  color: #e8a840;
-  text-shadow: 0 0 12px rgba(232, 168, 64, 0.5);
-  animation: timerBlink 1.2s ease-in-out infinite;
-}
-
-@keyframes timerBlink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-
-/* =====================
-   CONTROLS
-   ===================== */
-
-.controls-section {
-  flex: 0 0 auto;
-  display: flex;
-  justify-content: center;
-  padding: 10px 20px;
-  gap: 10px;
-}
-
-.pet-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 8px 20px;
-  border-radius: 8px;
-  border: 3px solid #5c3d2e;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.15s;
-  -webkit-app-region: no-drag;
-}
-
-.start-btn {
-  background: #6aaa6a;
-  color: white;
-  box-shadow:
-    inset 0 3px 0 rgba(255, 255, 255, 0.25),
-    inset 0 -3px 0 rgba(0, 0, 0, 0.12),
-    0px 5px 0px 0px #3d7a3d;
-}
-
-.start-btn:hover {
-  filter: brightness(1.08);
-  transform: translateY(-1px);
-}
-
-.start-btn:active {
-  transform: translateY(3px);
-  box-shadow:
-    inset 0 2px 4px rgba(0, 0, 0, 0.2),
-    0px 2px 0px 0px #3d7a3d;
-}
-
-.stop-btn {
-  background: #c0614a;
-  color: white;
-  box-shadow:
-    inset 0 3px 0 rgba(255, 255, 255, 0.25),
-    inset 0 -3px 0 rgba(0, 0, 0, 0.12),
-    0px 5px 0px 0px #8a3a28;
-}
-
-.stop-btn:hover {
-  filter: brightness(1.08);
-  transform: translateY(-1px);
-}
-
-.stop-btn:active {
-  transform: translateY(3px);
-  box-shadow:
-    inset 0 2px 4px rgba(0, 0, 0, 0.2),
-    0px 2px 0px 0px #8a3a28;
-}
-
-.btn-icon {
-  font-size: 10px;
-}
-
-.btn-text {
-  letter-spacing: 0.04em;
-}
-
-.hidden {
-  display: none !important;
-}
-
-/* =====================
-   MOTIVATIONAL TICKER
-   ===================== */
-
-.ticker-section {
-  flex: 0 0 auto;
-  padding: 6px 16px 12px;
-}
-
-.ticker-text {
-  font-size: 10px;
-  font-weight: 600;
-  color: #8c6a4a;
-  text-align: center;
-  line-height: 1.5;
-  padding: 6px 10px;
-  background: rgba(237, 224, 206, 0.6);
-  border-radius: 8px;
-  border: 1.5px dashed #c8b49a;
-  animation: tickerFade 0.5s ease-out;
-  min-height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-@keyframes tickerFade {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  text-shadow: 0 0 8px rgba(120, 220, 100, 0.4);
+  letter-spacing: 1px;
 }
 
 /* =====================
@@ -429,52 +150,29 @@ body {
    ===================== */
 
 .coffee-upgrade {
-  animation: coffeeFlash 0.6s ease-out;
+  animation: coffeeFlash 0.5s ease-out;
 }
 
 @keyframes coffeeFlash {
-  0% { transform: scale(1); filter: brightness(1); }
-  30% { transform: scale(1.2); filter: brightness(1.5) drop-shadow(0 0 20px rgba(232, 168, 64, 0.8)); }
-  100% { transform: scale(1); filter: brightness(1) drop-shadow(0 4px 8px rgba(180, 120, 60, 0.4)); }
+  0%  { transform: scale(1); filter: brightness(1); }
+  30% { transform: scale(1.3); filter: brightness(1.6) drop-shadow(0 0 12px rgba(232, 168, 64, 0.8)); }
+  100% { transform: scale(1); filter: brightness(1) drop-shadow(0 2px 4px rgba(180, 120, 60, 0.4)); }
 }
 
 /* =====================
-   PARTICLES (confetti on milestone)
+   CONFETTI PARTICLES
    ===================== */
 
 .particle {
   position: absolute;
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   pointer-events: none;
-  animation: particleFly 1s ease-out forwards;
+  animation: particleFly 0.8s ease-out forwards;
 }
 
 @keyframes particleFly {
-  0% {
-    opacity: 1;
-    transform: translate(0, 0) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(var(--dx), var(--dy)) scale(0.3);
-  }
-}
-
-/* =====================
-   SCROLLBAR
-   ===================== */
-
-::-webkit-scrollbar {
-  width: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(139, 90, 43, 0.3);
-  border-radius: 2px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
+  0%   { opacity: 1; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.2); }
 }
