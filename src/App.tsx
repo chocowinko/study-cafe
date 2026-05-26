@@ -331,7 +331,6 @@ export default function App() {
       }
     } catch (error) {
       console.error('Failed to save calendar tasks', error);
-      // Optional: show error to user
     }
 
     setEditingDay(null);

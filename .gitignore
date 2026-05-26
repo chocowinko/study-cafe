@@ -6,6 +6,3 @@ coverage/
 *.log
 .env*
 !.env.example
-# SQLite runtime files
-data/*.sqlite-wal
-data/*.sqlite-shm

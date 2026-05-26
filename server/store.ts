@@ -12,14 +12,6 @@ import type {
   TodayTasksResponse,
 } from './types';
 
-export const updateCalendarDayTasks = (date: string, titles: string[]) => {
-  return withTransaction(() => {
-    const calendarEntryId = upsertCalendarEntry(date);
-    syncCalendarEntryTaskTitles(calendarEntryId, titles);
-    return getTodayTasks(date);
-  });
-};
-
 const databaseFile = path.resolve(process.cwd(), 'data', 'study-cafe.sqlite');
 mkdirSync(path.dirname(databaseFile), {recursive: true});
 

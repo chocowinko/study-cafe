@@ -1,5 +1,6 @@
+import 'dotenv/config'; // 加载 .env 文件中的环境变量
 import express from 'express';
-import {buildOperationsFromInput} from './planner.ts';
+import {buildOperationsFromInput} from './planner';
 import {
   confirmAssistantDraft,
   createTask,
@@ -13,9 +14,8 @@ import {
   focusStartTask,
   listAssistantDrafts,
   updateTask,
-  updateCalendarDayTasks,
-} from './store.ts';
-import type {AssistantDraftStatus, CalendarPlanRequestBody, TaskStatus} from './types.ts';
+} from './store';
+import type {AssistantDraftStatus, CalendarPlanRequestBody, TaskStatus} from './types';
 
 const app = express();
 const port = Number(process.env.PORT ?? 3001);
@@ -30,24 +30,19 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-// 修改为 async (异步) 函数
 app.post('/api/assistant/calendar-plan', async (req, res) => {
+  const requestBody = req.body as CalendarPlanRequestBody;
   try {
-    const requestBody = req.body as CalendarPlanRequestBody;
-    
-    // 关键点：添加 await，等待远程 Open Claw 的返回结果
-    const draft = await buildOperationsFromInput(requestBody); 
-    
+    const draft = await buildOperationsFromInput(requestBody);
     const savedDraft = createAssistantDraft({
       input: requestBody.input ?? '',
       summary: draft.summary,
       operations: draft.operations,
     });
-
     res.json(savedDraft);
   } catch (error) {
-    console.error("处理 AI 排班失败:", error);
-    res.status(500).json({ ok: false, message: 'AI 代理响应超时或格式错误' });
+    const message = error instanceof Error ? error.message : 'AI 服务调用失败';
+    res.status(500).json({ok: false, message});
   }
 });
 
@@ -128,24 +123,6 @@ app.get('/api/calendar/month', (req, res) => {
     month,
     entries: getCalendarMonth(year, month),
   });
-});
-
-app.put('/api/calendar/day', (req, res) => {
-  const date = typeof req.body?.date === 'string' ? req.body.date : '';
-  const tasks = Array.isArray(req.body?.tasks) ? req.body.tasks : [];
-
-  if (!date) {
-    res.status(400).json({ok: false, message: 'date is required'});
-    return;
-  }
-
-  try {
-    const result = updateCalendarDayTasks(date, tasks);
-    res.json(result);
-  } catch (error) {
-    console.error('Failed to update calendar day tasks:', error);
-    res.status(500).json({ok: false, message: 'Failed to update calendar day tasks'});
-  }
 });
 
 app.get('/api/tasks/today', (req, res) => {
