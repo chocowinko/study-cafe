@@ -635,8 +635,10 @@ export default function App() {
         }
 
         const data: { drafts: CalendarPlanDraft[] } = await response.json();
-        if (!cancelled && data.drafts.length > 0) {
-          setAssistantDraft(data.drafts[0]);
+        // 滤掉 operations 为空的伪失败 draft（后端会把 AI 解析失败的记录也写为 pending）
+        const validDraft = data.drafts.find(d => d.operations && d.operations.length > 0);
+        if (!cancelled && validDraft) {
+          setAssistantDraft(validDraft);
         }
       } catch (error) {
         if (!cancelled) {
@@ -827,6 +829,7 @@ export default function App() {
 
     setIsAssistantLoading(true);
     setAssistantError(null);
+    setAssistantDraft(null);
 
     try {
       const response = await fetch('/api/assistant/calendar-plan', {
@@ -848,7 +851,14 @@ export default function App() {
       }
 
       const data: CalendarPlanDraft = await response.json();
-      setAssistantDraft(data);
+      // 后端遇到 AI 解析失败 / 输入模糊 时会返回 operations 为空的伪成功响应，
+      // 这里识别后转为错误提示，避免被当作合法 draft 渲染出一个口心棕色框。
+      if (!data.operations || data.operations.length === 0) {
+        setAssistantError(data.summary || '排班草案生成失败，请重试');
+        setAssistantDraft(null);
+      } else {
+        setAssistantDraft(data);
+      }
     } catch (error) {
       setAssistantError('排班草案生成失败，请稍后再试。');
     } finally {
@@ -893,6 +903,7 @@ export default function App() {
         setAssistantInput('');
         setAssistantError(null);
       } catch (error) {
+        setAssistantDraft(null);
         setAssistantError('草案确认失败，请稍后再试。');
       }
     };

@@ -36,6 +36,17 @@ app.post('/api/assistant/calendar-plan', async (req, res) => {
   const requestBody = req.body as CalendarPlanRequestBody;
   try {
     const draft = await buildOperationsFromInput(requestBody);
+    // 仅在 operations 非空（AI 解析成功）才写入 pending draft，
+    // 避免伪失败记录咠在数据库里被后续 effect 拉起重复展示。
+    if (!draft.operations || draft.operations.length === 0) {
+      res.json({
+        draftId: null,
+        summary: draft.summary,
+        operations: [],
+        status: 'failed',
+      });
+      return;
+    }
     const savedDraft = createAssistantDraft({
       input: requestBody.input ?? '',
       summary: draft.summary,
