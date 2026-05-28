@@ -538,6 +538,15 @@ export const getTodayTasks = (dateInput?: string): TodayTasksResponse => {
   };
 };
 
+export const updateCalendarDayTasks = (date: string, tasks: string[]) => {
+  return withTransaction(() => {
+    const calendarEntryId = upsertCalendarEntry(date);
+    syncCalendarEntryTaskTitles(calendarEntryId, tasks);
+    cleanupCalendarEntryIfEmpty(calendarEntryId);
+    return getTodayTasks(date);
+  });
+};
+
 export const createTask = ({
   date,
   title,

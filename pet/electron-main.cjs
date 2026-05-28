@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, screen } = require('electron');
 const path = require('path');
 
 let mainWindow = null;
@@ -18,11 +18,26 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      preload: path.join(__dirname, 'preload.cjs'),
     },
   });
 
   mainWindow.loadFile(path.join(__dirname, 'pet.html'));
   mainWindow.setIgnoreMouseEvents(false);
+
+  // Handle IPC window dragging from renderer
+  ipcMain.on('move-window', (_event, { x, y }) => {
+    if (mainWindow) {
+      mainWindow.setPosition(Math.round(x), Math.round(y));
+    }
+  });
+
+  // Return current window position to renderer (avoids window.screenX unreliability)
+  ipcMain.handle('get-window-pos', () => {
+    if (!mainWindow) return { x: 0, y: 0 };
+    const [x, y] = mainWindow.getPosition();
+    return { x, y };
+  });
 
   // Right-click context menu
   mainWindow.webContents.on('context-menu', () => {

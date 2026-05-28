@@ -1,6 +1,6 @@
 import 'dotenv/config'; // 加载 .env 文件中的环境变量
 import express from 'express';
-import { spawn, ChildProcess } from 'child_process';
+import { spawn, exec, ChildProcess } from 'child_process';
 import {buildOperationsFromInput} from './planner';
 import {
   confirmAssistantDraft,
@@ -16,6 +16,7 @@ import {
   listAssistantDrafts,
   setLongTermTasks,
   updateTask,
+  updateCalendarDayTasks,
 } from './store';
 import type {AssistantDraftStatus, CalendarPlanRequestBody, TaskStatus} from './types';
 
@@ -286,6 +287,16 @@ app.post('/api/pet/dismiss', (_req, res) => {
   res.json({ ok: true, source: 'cloud-stub' });
 });
 
-app.listen(port, '0.0.0.0', () => {
-  console.log(`Backend listening on http://0.0.0.0:${port}`);
+app.get('/api/pet/status', (_req, res) => {
+  res.json({ running: !!(petProcess && !petProcess.killed) });
 });
+
+app.listen(port, '0.0.0.0', async () => {
+  console.log(`Backend listening on http://0.0.0.0:${port}`);
+  try {
+    await killPetProcess();
+  } catch (error) {
+    console.error('Failed to clean up orphaned pet processes on startup:', error);
+  }
+});
+

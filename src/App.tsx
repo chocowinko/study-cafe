@@ -414,6 +414,33 @@ export default function App() {
     }
   }, [isModalOpen]);
 
+  // Sync pet toggle with actual backend pet process state on page load
+  useEffect(() => {
+    fetch('/api/pet/status')
+      .then(r => r.json())
+      .then(data => {
+        if (data.running) setPetEnabled(true);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Automatically dismiss the desktop pet when the browser tab/window is closed or unloaded
+  useEffect(() => {
+    const handleUnload = () => {
+      if (petEnabled) {
+        navigator.sendBeacon('/api/pet/dismiss');
+      }
+    };
+
+    window.addEventListener('beforeunload', handleUnload);
+    window.addEventListener('pagehide', handleUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload);
+      window.removeEventListener('pagehide', handleUnload);
+    };
+  }, [petEnabled]);
+
   const validateAndSaveTask = async () => {
     if (!modalForm.title.trim()) {
       setFormError('请输入任务内容');
@@ -756,18 +783,30 @@ export default function App() {
     void persistServe();
   };
 
+  // Recompute timeElapsed from focusStartedAt every second — drift-free.
+  // Also depends on activeTaskId so switching tasks immediately re-anchors the clock.
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (state.isTimerRunning) {
+    if (state.isTimerRunning && activeTask?.focusStartedAt) {
+      const focusStartedAt = new Date(activeTask.focusStartedAt).getTime();
+      const baseElapsed = activeTask.actualElapsed ?? 0;
+
+      // Immediately sync on mount / task switch
+      setState(prev => ({
+        ...prev,
+        timeElapsed: baseElapsed + Math.max(0, Math.floor((Date.now() - focusStartedAt) / 1000)),
+      }));
+
       interval = setInterval(() => {
         setState(prev => ({
           ...prev,
-          timeElapsed: prev.timeElapsed + 1
+          timeElapsed: baseElapsed + Math.max(0, Math.floor((Date.now() - focusStartedAt) / 1000)),
         }));
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [state.isTimerRunning]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.isTimerRunning, state.activeTaskId]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -1520,25 +1559,6 @@ export default function App() {
                     </label>
                   </div>
 
-                  {/* 🚀 测试专用：加速按钮 */}
-                  {activeTask && activeTask.status !== 'completed' && (
-                    <div className="flex gap-2 mt-1 border-t-2 border-dashed border-pixel-muted/20 pt-3">
-                      <button
-                        onClick={() => setState(prev => ({ ...prev, timeElapsed: prev.timeElapsed + 5 * 60 }))}
-                        title="加速5分钟"
-                        className="flex-1 py-1.5 bg-[#e8e4d8] border-2 border-pixel-border rounded shadow-[0_2px_0_0_#A08A7C] text-[10px] font-bold text-pixel-muted hover:bg-[#d8c4b8] active:translate-y-0.5 active:shadow-none transition-all"
-                      >
-                        ⏩ +5 分钟
-                      </button>
-                      <button
-                        onClick={() => setState(prev => ({ ...prev, timeElapsed: prev.timeElapsed + 1788 }))}
-                        title="加速29.8分钟"
-                        className="flex-1 py-1.5 bg-[#e8e4d8] border-2 border-pixel-border rounded shadow-[0_2px_0_0_#A08A7C] text-[10px] font-bold text-pixel-muted hover:bg-[#d8c4b8] active:translate-y-0.5 active:shadow-none transition-all"
-                      >
-                        ⏩ +29.8 分钟
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
