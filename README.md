@@ -1,6 +1,4 @@
 <div align="center">
-  <img width="1200" height="475" alt="Study Cafe Banner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-
   # ☕ Study Café (学习咖啡馆) 🐈
   
   **一款融合像素 RPG 游戏美学、动态咖啡酿造机制与 AI 智能排班的沉浸式专注与生产力提升工具。**
