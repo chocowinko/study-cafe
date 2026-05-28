@@ -635,8 +635,10 @@ export default function App() {
         }
 
         const data: { drafts: CalendarPlanDraft[] } = await response.json();
-        if (!cancelled && data.drafts.length > 0) {
-          setAssistantDraft(data.drafts[0]);
+        // 滤掉 operations 为空的伪失败 draft（后端会把 AI 解析失败的记录也写为 pending）
+        const validDraft = data.drafts.find(d => d.operations && d.operations.length > 0);
+        if (!cancelled && validDraft) {
+          setAssistantDraft(validDraft);
         }
       } catch (error) {
         if (!cancelled) {
