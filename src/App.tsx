@@ -848,7 +848,14 @@ export default function App() {
       }
 
       const data: CalendarPlanDraft = await response.json();
-      setAssistantDraft(data);
+      // 后端遇到 AI 解析失败 / 输入模糊 时会返回 operations 为空的伪成功响应，
+      // 这里识别后转为错误提示，避免被当作合法 draft 渲染出一个口心棕色框。
+      if (!data.operations || data.operations.length === 0) {
+        setAssistantError(data.summary || '排班草案生成失败，请重试');
+        setAssistantDraft(null);
+      } else {
+        setAssistantDraft(data);
+      }
     } catch (error) {
       setAssistantError('排班草案生成失败，请稍后再试。');
     } finally {
