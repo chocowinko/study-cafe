@@ -316,7 +316,8 @@ export default function App() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update calendar tasks');
+        const errBody = await response.json().catch(() => ({}));
+        throw new Error(errBody.message || `保存失败（HTTP ${response.status}）`);
       }
 
       // If the edited day is today, refresh the daily tasks
@@ -329,11 +330,13 @@ export default function App() {
       if (year && month) {
         await loadCalendarMonth(year, month);
       }
+      setEditingDay(null);
     } catch (error) {
       console.error('Failed to save calendar tasks', error);
+      const msg = error instanceof Error ? error.message : '保存日历任务失败';
+      setFormError(msg);
+      // 失败时不关闭编辑状态，让用户可以重试
     }
-
-    setEditingDay(null);
   };
 
 
@@ -659,8 +662,10 @@ export default function App() {
         }
 
         const data: { drafts: CalendarPlanDraft[] } = await response.json();
-        if (!cancelled && data.drafts.length > 0) {
-          setAssistantDraft(data.drafts[0]);
+        // 滤掉 operations 为空的伪失败 draft（后端会把 AI 解析失败的记录也写为 pending）
+        const validDraft = data.drafts.find(d => d.operations && d.operations.length > 0);
+        if (!cancelled && validDraft) {
+          setAssistantDraft(validDraft);
         }
       } catch (error) {
         if (!cancelled) {
@@ -863,6 +868,7 @@ export default function App() {
 
     setIsAssistantLoading(true);
     setAssistantError(null);
+    setAssistantDraft(null);
 
     try {
       const response = await fetch('/api/assistant/calendar-plan', {
@@ -884,7 +890,14 @@ export default function App() {
       }
 
       const data: CalendarPlanDraft = await response.json();
-      setAssistantDraft(data);
+      // 后端遇到 AI 解析失败 / 输入模糊 时会返回 operations 为空的伪成功响应，
+      // 这里识别后转为错误提示，避免被当作合法 draft 渲染出一个口心棕色框。
+      if (!data.operations || data.operations.length === 0) {
+        setAssistantError(data.summary || '排班草案生成失败，请重试');
+        setAssistantDraft(null);
+      } else {
+        setAssistantDraft(data);
+      }
     } catch (error) {
       setAssistantError('排班草案生成失败，请稍后再试。');
     } finally {
@@ -929,6 +942,7 @@ export default function App() {
         setAssistantInput('');
         setAssistantError(null);
       } catch (error) {
+        setAssistantDraft(null);
         setAssistantError('草案确认失败，请稍后再试。');
       }
     };
@@ -1577,8 +1591,15 @@ export default function App() {
                 </div>
               )}
               {assistantError && (
-                <div className="text-xs font-bold text-pixel-red p-3 border-2 border-red-200 bg-red-50 rounded-lg">
-                  {assistantError}
+                <div className="text-xs font-bold text-pixel-red p-3 border-2 border-red-200 bg-red-50 rounded-lg flex items-start gap-2">
+                  <span className="flex-1">{assistantError}</span>
+                  <button
+                    onClick={() => setAssistantError(null)}
+                    className="text-red-400 hover:text-red-600 font-bold text-sm leading-none px-1"
+                    aria-label="关闭错误提示"
+                  >
+                    ✕
+                  </button>
                 </div>
               )}
               {assistantDraft && (
@@ -1646,7 +1667,10 @@ export default function App() {
               </div>
               <textarea
                 value={assistantInput}
-                onChange={(e) => setAssistantInput(e.target.value)}
+                onChange={(e) => {
+                  setAssistantInput(e.target.value);
+                  if (assistantError) setAssistantError(null);
+                }}
                 placeholder={planMode === 'deep' ? "详细描述学习目标，我会帮你深入拆解..." : "例如：我有三篇论文要在下周五前看完，还有一篇大作业月底截止..."}
                 className={cn("pixel-input-modal custom-scrollbar min-h-[80px] resize-none text-sm", planMode && "amber")}
               />

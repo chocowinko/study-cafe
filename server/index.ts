@@ -14,6 +14,7 @@ import {
   focusFinishTask,
   focusStartTask,
   listAssistantDrafts,
+  setLongTermTasks,
   updateTask,
   updateCalendarDayTasks,
 } from './store';
@@ -36,6 +37,17 @@ app.post('/api/assistant/calendar-plan', async (req, res) => {
   const requestBody = req.body as CalendarPlanRequestBody;
   try {
     const draft = await buildOperationsFromInput(requestBody);
+    // 仅在 operations 非空（AI 解析成功）才写入 pending draft，
+    // 避免伪失败记录咠在数据库里被后续 effect 拉起重复展示。
+    if (!draft.operations || draft.operations.length === 0) {
+      res.json({
+        draftId: null,
+        summary: draft.summary,
+        operations: [],
+        status: 'failed',
+      });
+      return;
+    }
     const savedDraft = createAssistantDraft({
       input: requestBody.input ?? '',
       summary: draft.summary,
@@ -127,22 +139,23 @@ app.get('/api/calendar/month', (req, res) => {
   });
 });
 
+// 覆写某一天的「店长排班」长期任务列表
 app.put('/api/calendar/day', (req, res) => {
   const date = typeof req.body?.date === 'string' ? req.body.date : '';
-  const tasks = Array.isArray(req.body?.tasks) ? req.body.tasks.filter((t: any) => typeof t === 'string') : [];
+  const tasks = Array.isArray(req.body?.tasks) ? req.body.tasks : null;
 
-  if (!date) {
-    res.status(400).json({ok: false, message: 'date is required'});
+  // 验证 date 格式 YYYY-MM-DD
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    res.status(400).json({ ok: false, message: 'date must be YYYY-MM-DD' });
+    return;
+  }
+  if (!tasks || !tasks.every((t: unknown) => typeof t === 'string')) {
+    res.status(400).json({ ok: false, message: 'tasks must be an array of strings' });
     return;
   }
 
-  try {
-    const result = updateCalendarDayTasks(date, tasks);
-    res.json(result);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to update calendar day tasks';
-    res.status(500).json({ok: false, message});
-  }
+  const result = setLongTermTasks(date, tasks);
+  res.json({ ok: true, ...result });
 });
 
 app.get('/api/tasks/today', (req, res) => {
@@ -259,34 +272,19 @@ const electronPath = process.platform === 'win32'
   ? './node_modules/electron/dist/electron.exe'
   : './node_modules/.bin/electron';
 
-/** Kill any running pet Electron process (including orphans from backend restarts) */
-function killPetProcess(): Promise<void> {
-  return new Promise((resolve) => {
-    if (petProcess && !petProcess.killed) {
-      petProcess.once('exit', () => {
-        petProcess = null;
-        resolve();
-      });
-      petProcess.kill();
-    } else {
-      petProcess = null;
-      // Also try to kill orphaned electron pet processes (e.g. after backend hot-reload)
-      exec('pkill -f "electron pet/electron-main.cjs"', () => resolve());
-    }
+// ⚠️ 云服务器没有桌面环境，spawn Electron 没意义。
+// 桌宠启动/关闭由前端 vite 插件 local-pet 在本机处理。
+// 下面保留 stub 仅为防止老客户端调用报 404，返回带警告的 ok。
+app.post('/api/pet/summon', (_req, res) => {
+  res.json({
+    ok: true,
+    source: 'cloud-stub',
+    note: 'Pet runs locally via vite plugin; cloud backend cannot spawn desktop apps.',
   });
-}
-
-app.post('/api/pet/summon', async (_req, res) => {
-  // Always kill existing process first to prevent duplicates
-  await killPetProcess();
-  petProcess = spawn(electronPath, ['pet/electron-main.cjs'], { stdio: 'ignore' });
-  petProcess.on('exit', () => { petProcess = null; });
-  res.json({ ok: true });
 });
 
-app.post('/api/pet/dismiss', async (_req, res) => {
-  await killPetProcess();
-  res.json({ ok: true });
+app.post('/api/pet/dismiss', (_req, res) => {
+  res.json({ ok: true, source: 'cloud-stub' });
 });
 
 app.get('/api/pet/status', (_req, res) => {
