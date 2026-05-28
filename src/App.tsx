@@ -316,7 +316,8 @@ export default function App() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update calendar tasks');
+        const errBody = await response.json().catch(() => ({}));
+        throw new Error(errBody.message || `保存失败（HTTP ${response.status}）`);
       }
 
       // If the edited day is today, refresh the daily tasks
@@ -329,11 +330,13 @@ export default function App() {
       if (year && month) {
         await loadCalendarMonth(year, month);
       }
+      setEditingDay(null);
     } catch (error) {
       console.error('Failed to save calendar tasks', error);
+      const msg = error instanceof Error ? error.message : '保存日历任务失败';
+      setFormError(msg);
+      // 失败时不关闭编辑状态，让用户可以重试
     }
-
-    setEditingDay(null);
   };
 
 
@@ -1557,8 +1560,15 @@ export default function App() {
                 </div>
               )}
               {assistantError && (
-                <div className="text-xs font-bold text-pixel-red p-3 border-2 border-red-200 bg-red-50 rounded-lg">
-                  {assistantError}
+                <div className="text-xs font-bold text-pixel-red p-3 border-2 border-red-200 bg-red-50 rounded-lg flex items-start gap-2">
+                  <span className="flex-1">{assistantError}</span>
+                  <button
+                    onClick={() => setAssistantError(null)}
+                    className="text-red-400 hover:text-red-600 font-bold text-sm leading-none px-1"
+                    aria-label="关闭错误提示"
+                  >
+                    ✕
+                  </button>
                 </div>
               )}
               {assistantDraft && (
@@ -1626,7 +1636,10 @@ export default function App() {
               </div>
               <textarea
                 value={assistantInput}
-                onChange={(e) => setAssistantInput(e.target.value)}
+                onChange={(e) => {
+                  setAssistantInput(e.target.value);
+                  if (assistantError) setAssistantError(null);
+                }}
                 placeholder={planMode === 'deep' ? "详细描述学习目标，我会帮你深入拆解..." : "例如：我有三篇论文要在下周五前看完，还有一篇大作业月底截止..."}
                 className={cn("pixel-input-modal custom-scrollbar min-h-[80px] resize-none text-sm", planMode && "amber")}
               />

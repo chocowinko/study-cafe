@@ -14,6 +14,7 @@ import {
   focusFinishTask,
   focusStartTask,
   listAssistantDrafts,
+  setLongTermTasks,
   updateTask,
 } from './store';
 import type {AssistantDraftStatus, CalendarPlanRequestBody, TaskStatus} from './types';
@@ -124,6 +125,25 @@ app.get('/api/calendar/month', (req, res) => {
     month,
     entries: getCalendarMonth(year, month),
   });
+});
+
+// 覆写某一天的「店长排班」长期任务列表
+app.put('/api/calendar/day', (req, res) => {
+  const date = typeof req.body?.date === 'string' ? req.body.date : '';
+  const tasks = Array.isArray(req.body?.tasks) ? req.body.tasks : null;
+
+  // 验证 date 格式 YYYY-MM-DD
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    res.status(400).json({ ok: false, message: 'date must be YYYY-MM-DD' });
+    return;
+  }
+  if (!tasks || !tasks.every((t: unknown) => typeof t === 'string')) {
+    res.status(400).json({ ok: false, message: 'tasks must be an array of strings' });
+    return;
+  }
+
+  const result = setLongTermTasks(date, tasks);
+  res.json({ ok: true, ...result });
 });
 
 app.get('/api/tasks/today', (req, res) => {
@@ -240,20 +260,19 @@ const electronPath = process.platform === 'win32'
   ? './node_modules/electron/dist/electron.exe'
   : './node_modules/.bin/electron';
 
-app.post('/api/pet/summon', (req, res) => {
-  if (!petProcess || petProcess.killed) {
-    petProcess = spawn(electronPath, ['pet/electron-main.cjs']);
-    petProcess.on('exit', () => { petProcess = null; });
-  }
-  res.json({ ok: true });
+// ⚠️ 云服务器没有桌面环境，spawn Electron 没意义。
+// 桌宠启动/关闭由前端 vite 插件 local-pet 在本机处理。
+// 下面保留 stub 仅为防止老客户端调用报 404，返回带警告的 ok。
+app.post('/api/pet/summon', (_req, res) => {
+  res.json({
+    ok: true,
+    source: 'cloud-stub',
+    note: 'Pet runs locally via vite plugin; cloud backend cannot spawn desktop apps.',
+  });
 });
 
-app.post('/api/pet/dismiss', (req, res) => {
-  if (petProcess && !petProcess.killed) {
-    petProcess.kill();
-    petProcess = null;
-  }
-  res.json({ ok: true });
+app.post('/api/pet/dismiss', (_req, res) => {
+  res.json({ ok: true, source: 'cloud-stub' });
 });
 
 app.listen(port, '0.0.0.0', () => {
