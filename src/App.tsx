@@ -827,6 +827,7 @@ export default function App() {
 
     setIsAssistantLoading(true);
     setAssistantError(null);
+    setAssistantDraft(null);
 
     try {
       const response = await fetch('/api/assistant/calendar-plan', {
