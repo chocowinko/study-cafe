@@ -678,7 +678,7 @@ export const setLongTermTasks = (date: string, titles: string[]) => {
           created_at, updated_at
         )
         VALUES (?, ?, '', 'idle', NULL, 0, 0, NULL, ?, ?, ?)
-      `).run(calendarEntryId, idx, now, now);
+      `).run(calendarEntryId, trimmed, idx, now, now);
     });
   });
 
