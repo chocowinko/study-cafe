@@ -1,6 +1,6 @@
 import 'dotenv/config'; // 加载 .env 文件中的环境变量
 import express from 'express';
-import { spawn, ChildProcess } from 'child_process';
+import { spawn, exec, ChildProcess } from 'child_process';
 import {buildOperationsFromInput} from './planner';
 import {
   confirmAssistantDraft,
@@ -240,22 +240,46 @@ const electronPath = process.platform === 'win32'
   ? './node_modules/electron/dist/electron.exe'
   : './node_modules/.bin/electron';
 
-app.post('/api/pet/summon', (req, res) => {
-  if (!petProcess || petProcess.killed) {
-    petProcess = spawn(electronPath, ['pet/electron-main.cjs']);
-    petProcess.on('exit', () => { petProcess = null; });
-  }
+/** Kill any running pet Electron process (including orphans from backend restarts) */
+function killPetProcess(): Promise<void> {
+  return new Promise((resolve) => {
+    if (petProcess && !petProcess.killed) {
+      petProcess.once('exit', () => {
+        petProcess = null;
+        resolve();
+      });
+      petProcess.kill();
+    } else {
+      petProcess = null;
+      // Also try to kill orphaned electron pet processes (e.g. after backend hot-reload)
+      exec('pkill -f "electron pet/electron-main.cjs"', () => resolve());
+    }
+  });
+}
+
+app.post('/api/pet/summon', async (_req, res) => {
+  // Always kill existing process first to prevent duplicates
+  await killPetProcess();
+  petProcess = spawn(electronPath, ['pet/electron-main.cjs'], { stdio: 'ignore' });
+  petProcess.on('exit', () => { petProcess = null; });
   res.json({ ok: true });
 });
 
-app.post('/api/pet/dismiss', (req, res) => {
-  if (petProcess && !petProcess.killed) {
-    petProcess.kill();
-    petProcess = null;
-  }
+app.post('/api/pet/dismiss', async (_req, res) => {
+  await killPetProcess();
   res.json({ ok: true });
 });
 
-app.listen(port, '0.0.0.0', () => {
+app.get('/api/pet/status', (_req, res) => {
+  res.json({ running: !!(petProcess && !petProcess.killed) });
+});
+
+app.listen(port, '0.0.0.0', async () => {
   console.log(`Backend listening on http://0.0.0.0:${port}`);
+  try {
+    await killPetProcess();
+  } catch (error) {
+    console.error('Failed to clean up orphaned pet processes on startup:', error);
+  }
 });
+

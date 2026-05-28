@@ -8,7 +8,7 @@
 // =====================
 
 const API_BASE = 'http://127.0.0.1:3001';
-const POLL_INTERVAL = 3000; // 3 秒轮询一次
+const POLL_INTERVAL = 2000; // 2 秒轮询一次（更快响应切换）
 
 const COFFEE_TIERS = [
   { name: '美式咖啡', image: '../public/americano.png', minMinutes: 0 },
@@ -62,6 +62,7 @@ const IDLE_MESSAGES = [
 
 let state = {
   isFocusing: false,
+  currentFocusTaskId: null,   // 追踪当前专注的任务 ID
   elapsedSeconds: 0,
   currentCoffeeTier: 0,
   lastCoffeeTier: -1,
@@ -179,37 +180,84 @@ async function pollBackend() {
     const data = await res.json();
     const tasks = data.tasks || [];
 
-    // Find the actively focused task (has focusStartedAt)
+    // 找出当前正在专注的任务（有 focusStartedAt，且未完成）
     const focusedTask = tasks.find(t => t.focusStartedAt && t.status !== 'completed');
 
     if (focusedTask) {
-      // Calculate elapsed
+      // 用 focusStartedAt 精确计算经过时间，与前端对齐，无漂移
       const baseElapsed = focusedTask.actualElapsed || 0;
       const startedAt = new Date(focusedTask.focusStartedAt).getTime();
       const liveElapsed = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
       const totalElapsed = baseElapsed + liveElapsed;
 
-      if (!state.isFocusing) {
-        // Just started focusing
+      const taskChanged = state.currentFocusTaskId !== focusedTask.id;
+      const wasNotFocusing = !state.isFocusing;
+
+      if (wasNotFocusing || taskChanged) {
+        // 刚开始专注，或者切换到了不同的任务 → 重新启动本地计时器
         state.isFocusing = true;
+        state.currentFocusTaskId = focusedTask.id;
         state.lastCoffeeTier = -1;
         startLocalTick(totalElapsed, startedAt, baseElapsed);
-        startEncouragement();
+        if (wasNotFocusing) {
+          startEncouragement();
+        } else if (taskChanged) {
+          // 切换任务时更新气泡提示
+          const shortTitle = focusedTask.title.length > 10
+            ? focusedTask.title.slice(0, 10) + '…'
+            : focusedTask.title;
+          setSpeech(`切换任务：${shortTitle} 📝`);
+        }
       }
 
-      // Update coffee tier
+      // 实时更新咖啡等级（本地 tick 也会检测，但这里做即时响应）
       const tier = getCoffeeTierIndex(totalElapsed);
       if (tier !== state.currentCoffeeTier) {
         state.currentCoffeeTier = tier;
         updateCoffee(tier);
       }
     } else {
+      // 没有任务在专注中（可能是暂停、完成、或切换到空任务）
       if (state.isFocusing) {
-        // Just stopped focusing
+        // 刚从专注切换到暂停/停止
         state.isFocusing = false;
+        state.currentFocusTaskId = null;
         stopLocalTick();
         stopEncouragement();
-        nextIdleMessage();
+
+        // 如果有暂停的任务，显示它的已暂停时长
+        const pausedTask = tasks.find(t => (t.actualElapsed || 0) > 0 && t.status !== 'completed');
+        if (pausedTask) {
+          els.timerDisplay.textContent = formatTime(pausedTask.actualElapsed || 0);
+
+          // 根据暂停任务更新咖啡图标
+          const tier = getCoffeeTierIndex(pausedTask.actualElapsed || 0);
+          if (tier !== state.currentCoffeeTier) {
+            state.currentCoffeeTier = tier;
+            updateCoffee(tier);
+          }
+          setSpeech('已暂停 ☕ 随时继续！');
+        } else {
+          els.timerDisplay.textContent = '00:00';
+          nextIdleMessage();
+        }
+      } else {
+        // 本来就没在专注，检查是否有选中任务切换了（有 actualElapsed 但没在专注）
+        const pausedTask = tasks.find(t => (t.actualElapsed || 0) > 0 && t.status !== 'completed');
+        if (pausedTask) {
+          // 更新显示暂停任务的时间（应对主应用切换选中任务的情况）
+          els.timerDisplay.textContent = formatTime(pausedTask.actualElapsed || 0);
+          const tier = getCoffeeTierIndex(pausedTask.actualElapsed || 0);
+          if (tier !== state.currentCoffeeTier) {
+            state.currentCoffeeTier = tier;
+            // 不触发升级动画，只更新图片
+            const tierData = COFFEE_TIERS[tier] || COFFEE_TIERS[0];
+            els.coffeeImage.src = tierData.image;
+            els.catImage.src = CAT_IMAGES[tierData.name] || CAT_IMAGES['美式咖啡'];
+            state.currentCoffeeTier = tier;
+            state.lastCoffeeTier = tier;
+          }
+        }
       }
     }
   } catch (e) {
@@ -227,6 +275,7 @@ function startLocalTick(initialElapsed, focusStartedAt, baseElapsed) {
   els.timerDisplay.textContent = formatTime(initialElapsed);
 
   localTickTimer = setInterval(() => {
+    // 与前端一致：始终从 focusStartedAt 计算，不累加，避免漂移
     const liveElapsed = Math.max(0, Math.floor((Date.now() - focusStartedAt) / 1000));
     state.elapsedSeconds = baseElapsed + liveElapsed;
     els.timerDisplay.textContent = formatTime(state.elapsedSeconds);
@@ -287,8 +336,12 @@ function init() {
     }
   }, 15000);
 
-  // Click cat to manually cycle through messages
-  els.catArea.addEventListener('click', () => {
+  // =====================
+  // DRAG is handled natively by CSS -webkit-app-region: drag
+  // (zero latency, OS-level window dragging)
+  // Double-click anywhere to cycle messages
+  // =====================
+  document.addEventListener('dblclick', () => {
     if (state.isFocusing) {
       nextEncouragement();
     } else {
@@ -296,5 +349,8 @@ function init() {
     }
   });
 }
+
+
+
 
 document.addEventListener('DOMContentLoaded', init);
