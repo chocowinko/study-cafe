@@ -654,6 +654,40 @@ export const updateTask = (
   return getTaskById(String(existing.id));
 };
 
+/**
+ * 覆写某一天的任务列表（日历页「店长排班」使用）
+ * 行为：删除该日已有的所有 tasks，重新插入传入的 titles。
+ * 保留其他日期 + 备注完全不变。
+ */
+export const setLongTermTasks = (date: string, titles: string[]) => {
+  const now = nowIso();
+  const calendarEntryId = upsertCalendarEntry(date);
+
+  withTransaction(() => {
+    // 先清除该 calendar_entry 下所有 tasks
+    db.prepare(`DELETE FROM tasks WHERE calendar_entry_id = ?`).run(calendarEntryId);
+
+    // 重新插入
+    titles.forEach((title, idx) => {
+      const trimmed = title.trim();
+      if (!trimmed) return;
+      db.prepare(`
+        INSERT INTO tasks (
+          calendar_entry_id, title, subtitle, status, coffee_type,
+          actual_elapsed, is_served, focus_started_at, sort_order,
+          created_at, updated_at
+        )
+        VALUES (?, ?, '', 'idle', NULL, 0, 0, NULL, ?, ?, ?)
+      `).run(calendarEntryId, idx, now, now);
+    });
+  });
+
+  return {
+    date,
+    tasks: titles.filter(t => t.trim()),
+  };
+};
+
 export const deleteTask = (taskId: string) => {
   const existing = getTaskRowById(taskId);
   if (!existing) {
