@@ -421,6 +421,23 @@ export default function App() {
       .catch(() => {});
   }, []);
 
+  // Automatically dismiss the desktop pet when the browser tab/window is closed or unloaded
+  useEffect(() => {
+    const handleUnload = () => {
+      if (petEnabled) {
+        navigator.sendBeacon('/api/pet/dismiss');
+      }
+    };
+
+    window.addEventListener('beforeunload', handleUnload);
+    window.addEventListener('pagehide', handleUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload);
+      window.removeEventListener('pagehide', handleUnload);
+    };
+  }, [petEnabled]);
+
   const validateAndSaveTask = async () => {
     if (!modalForm.title.trim()) {
       setFormError('请输入任务内容');
