@@ -1,7 +1,15 @@
 <div align="center">
-  # ☕ Study Café (学习咖啡馆) 🐈
+  <h1 style="border-bottom: none; margin-bottom: 0px; font-size: 3.2rem; font-family: 'Courier New', Courier, monospace;">
+    ☕ <span style="color: #5c3d2e;">𝕊𝕥𝕦𝕕𝕪 ℂ𝕒𝕗𝕖́</span> 🐈
+  </h1>
   
-  **一款融合像素 RPG 游戏美学、动态咖啡酿造机制与 AI 智能排班的沉浸式专注与生产力提升工具。**
+  <h3 style="border-bottom: none; margin-top: 10px; color: #8b6550; font-family: monospace; font-weight: bold; letter-spacing: 1px;">
+    店长的「像素风 RPG 专注特调」与 AI 智能排班馆
+  </h3>
+  
+  <p style="color: #7a6e67; font-size: 1.05rem; line-height: 1.6; max-width: 800px; margin: 15px auto; font-weight: 500;">
+    一款融合了<strong>像素 RPG 游戏美学</strong>、<strong>动态咖啡酿造机制</strong>与 <strong>AI 智能排班</strong>的沉浸式专注与生产力提升工具。
+  </p>
 
   [![React](https://img.shields.io/badge/React-19.0-blue?logo=react&logoColor=white)](https://react.dev/)
   [![Vite](https://img.shields.io/badge/Vite-6.2-646CFF?logo=vite&logoColor=white)](https://vite.dev/)
