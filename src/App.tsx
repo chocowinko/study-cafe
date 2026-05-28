@@ -901,6 +901,7 @@ export default function App() {
         setAssistantInput('');
         setAssistantError(null);
       } catch (error) {
+        setAssistantDraft(null);
         setAssistantError('草案确认失败，请稍后再试。');
       }
     };
