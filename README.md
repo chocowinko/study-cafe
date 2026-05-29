@@ -35,17 +35,8 @@ cd study-cafe-main
 npm install
 ```
 
-### 2. 配置环境变量
-在项目根目录下，将 `.env.example` 复制一份并重命名为 `.env.local` 或者是直接在 `.env` 中修改：
-```ini
-# 配置你的 Google Gemini API Key
-GEMINI_API_KEY="YOUR_ACTUAL_GEMINI_API_KEY"
 
-# 应用运行的默认根路径 (可选)
-APP_URL="http://localhost:3000"
-```
-
-### 3. 本地启动运行
+### 2. 本地启动运行
 Study Café 已经配置好了并发进程管理，一键命令即可同时启动前端、后端和文件监听服务：
 ```bash
 npm run dev
